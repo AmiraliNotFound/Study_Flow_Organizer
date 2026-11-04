@@ -1,0 +1,83 @@
+{
+  "$schema": "StudyFlowOrganizer_v3",
+  "metadata": {
+    "version": "3.1.0",
+    "appName": "Study Flow Organizer",
+    "lastSaved": "2026-11-04T12:00:00.000Z",
+    "language": "en"
+  },
+  "user": {
+    "username": "student"
+  },
+  "config": {
+    "taskTypes": [
+      {
+        "id": "tt_hw",
+        "name": "HW",
+        "icon": "📚"
+      },
+      {
+        "id": "tt_project",
+        "name": "Project",
+        "icon": "💻"
+      },
+      {
+        "id": "tt_report",
+        "name": "Lab Report",
+        "icon": "📄"
+      },
+      {
+        "id": "tt_reading",
+        "name": "Reading",
+        "icon": "📖"
+      },
+      {
+        "id": "tt_custom",
+        "name": "Custom",
+        "icon": "📌"
+      }
+    ],
+    "eventTypes": [
+      {
+        "id": "et_quiz",
+        "name": "Quiz",
+        "icon": "📝"
+      },
+      {
+        "id": "et_midterm",
+        "name": "Midterm Exam",
+        "icon": "🎓"
+      },
+      {
+        "id": "et_final",
+        "name": "Final Exam",
+        "icon": "🏆"
+      },
+      {
+        "id": "et_presentation",
+        "name": "Presentation",
+        "icon": "📊"
+      },
+      {
+        "id": "et_class",
+        "name": "Review Session",
+        "icon": "🏛️"
+      },
+      {
+        "id": "et_custom",
+        "name": "Custom Event",
+        "icon": "📌"
+      }
+    ],
+    "materialTypes": [
+      {
+        "id": "mat_folder",
+        "name": "Course Folder",
+        "icon": "📁"
+      }
+    ]
+  },
+  "subjects": [],
+  "items": [],
+  "materials": []
+}

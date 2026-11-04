@@ -1,0 +1,20 @@
+# Personal data & local backups
+*.personal.json
+*.local.json
+study_flow_data.personal.json
+picked_material.js
+dumped_dom.html
+test_*.js
+*.tmp
+*.log
+
+# Windows thumbnail & desktop caches
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Editor & Agent directories
+.vscode/
+.idea/
+.gemini/
