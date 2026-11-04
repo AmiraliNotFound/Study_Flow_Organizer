@@ -1,14 +1,22 @@
-# Personal data & local backups
+# Personal user data & local backups
 *.personal.json
 *.local.json
-study_flow_data.personal.json
+*.user.json
+data/backups/
+data/*.personal.json
+data/*.local.json
+data/*.user.json
+
+# Temporary bridge & scratch scripts
 picked_material.js
+app/picked_material.js
+scripts/picked_material.js
 dumped_dom.html
 test_*.js
 *.tmp
 *.log
 
-# Windows thumbnail & desktop caches
+# Windows caches
 Thumbs.db
 ehthumbs.db
 Desktop.ini

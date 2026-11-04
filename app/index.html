@@ -3083,9 +3083,12 @@
                     <button type="button" class="btn btn-primary" onclick="triggerNativeGitPush()" style="padding: 10px; background: linear-gradient(135deg, #0284c7, #0369a1); font-weight: 700; font-size: 0.9rem; box-shadow: 0 4px 15px rgba(2, 132, 199, 0.4); justify-content: center;">
                         <span>⚡ Automated One-Click Push to GitHub</span>
                     </button>
+                    <button type="button" class="btn btn-secondary" onclick="triggerNativeGitPull()" style="padding: 9px; background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.4); color: #34D399; font-weight: 700; font-size: 0.86rem; justify-content: center;">
+                        <span>🔄 Safe Pull from GitHub (Preserves Your Data)</span>
+                    </button>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
                         <button type="button" class="btn btn-secondary btn-sm" onclick="triggerNativeGitDashboard()" style="justify-content: center;">
-                            <span>💻 Launch Terminal Dashboard</span>
+                            <span>💻 Launch Push Dashboard</span>
                         </button>
                         <button type="button" class="btn btn-secondary btn-sm" onclick="copyGitPushCommand()" style="justify-content: center;">
                             <span>📋 Copy Git Push Command</span>
@@ -5042,6 +5045,21 @@ function copyGitPushCommand() {
     const cmd = `git add -A && git commit -m "${msg}" && git push origin main`;
     copyTextToClipboard(cmd);
     showToast("📋 Git push command copied to clipboard!", "success");
+}
+
+function triggerNativeGitPull() {
+    try {
+        const link = document.createElement('a');
+        link.href = 'openfile://launch-git-pull';
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        setTimeout(() => link.remove(), 600);
+        showToast("🔄 Launching safe Git Pull with zero data loss protection...", "info");
+    } catch (err) {
+        copyTextToClipboard("git pull origin main");
+        showToast("📋 'git pull origin main' copied to clipboard!", "success");
+    }
 }
 
 // ==========================================================================

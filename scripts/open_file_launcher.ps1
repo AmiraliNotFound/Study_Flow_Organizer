@@ -13,6 +13,10 @@ try {
     # 3. Clean up quotes and whitespace
     $cleanPath = $cleanPath.Trim('"').Trim("'").Trim()
     
+    $repoDir = Split-Path $PSScriptRoot -Parent
+    if (!$repoDir) { $repoDir = $PSScriptRoot }
+    $appDir = Join-Path $repoDir "app"
+
     # Handle pick-file action
     if ($cleanPath -match '^(pick-file|select-file)') {
         Add-Type -AssemblyName System.Windows.Forms
@@ -33,13 +37,16 @@ try {
             # Copy to clipboard
             try { Set-Clipboard -Value $path } catch {}
             
-            # Write JS callback file for browser pickup
-            $jsPath = Join-Path $PSScriptRoot "picked_material.js"
+            # Write JS callback file for browser pickup in both app and root
             $escapedPath = $path.Replace('\', '\\').Replace('"', '\"')
             $escapedName = $name.Replace('\', '\\').Replace('"', '\"')
             $ts = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
             $jsCode = "window.__onMaterialPicked && window.__onMaterialPicked({ path: ""$escapedPath"", name: ""$escapedName"", ext: ""$ext"", isFolder: false, timestamp: $ts });"
-            [System.IO.File]::WriteAllText($jsPath, $jsCode, [System.Text.Encoding]::UTF8)
+            
+            $appJsPath = Join-Path $appDir "picked_material.js"
+            [System.IO.File]::WriteAllText($appJsPath, $jsCode, [System.Text.Encoding]::UTF8)
+            $rootJsPath = Join-Path $repoDir "picked_material.js"
+            [System.IO.File]::WriteAllText($rootJsPath, $jsCode, [System.Text.Encoding]::UTF8)
         }
         exit 0
     }
@@ -63,13 +70,16 @@ try {
             # Copy to clipboard
             try { Set-Clipboard -Value $path } catch {}
             
-            # Write JS callback file for browser pickup
-            $jsPath = Join-Path $PSScriptRoot "picked_material.js"
+            # Write JS callback file for browser pickup in both app and root
             $escapedPath = $path.Replace('\', '\\').Replace('"', '\"')
             $escapedName = $name.Replace('\', '\\').Replace('"', '\"')
             $ts = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
             $jsCode = "window.__onMaterialPicked && window.__onMaterialPicked({ path: ""$escapedPath"", name: ""$escapedName"", ext: ""folder"", isFolder: true, timestamp: $ts });"
-            [System.IO.File]::WriteAllText($jsPath, $jsCode, [System.Text.Encoding]::UTF8)
+            
+            $appJsPath = Join-Path $appDir "picked_material.js"
+            [System.IO.File]::WriteAllText($appJsPath, $jsCode, [System.Text.Encoding]::UTF8)
+            $rootJsPath = Join-Path $repoDir "picked_material.js"
+            [System.IO.File]::WriteAllText($rootJsPath, $jsCode, [System.Text.Encoding]::UTF8)
         }
         exit 0
     }
@@ -80,7 +90,6 @@ try {
         if ($cleanPath -match 'msg=([^&]+)') {
             $msg = [System.Uri]::UnescapeDataString($matches[1])
         }
-        $repoDir = $PSScriptRoot
         Push-Location $repoDir
         try {
             git add -A
@@ -99,7 +108,16 @@ try {
 
     # Handle launch-git-dashboard action
     if ($cleanPath -match '^launch-git-dashboard') {
-        $batPath = Join-Path $PSScriptRoot "push_to_github.bat"
+        $batPath = Join-Path $repoDir "Push_To_GitHub.bat"
+        if (Test-Path $batPath) {
+            Start-Process -FilePath "cmd.exe" -ArgumentList "/c `"$batPath`""
+        }
+        exit 0
+    }
+
+    # Handle launch-git-pull action
+    if ($cleanPath -match '^launch-git-pull') {
+        $batPath = Join-Path $repoDir "Pull_From_GitHub.bat"
         if (Test-Path $batPath) {
             Start-Process -FilePath "cmd.exe" -ArgumentList "/c `"$batPath`""
         }
