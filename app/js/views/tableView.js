@@ -37,7 +37,7 @@ export function renderTableView(container) {
     headerStrip.innerHTML = `
         <div style="display: flex; align-items: center; gap: 8px;">
             <h2>📑 Courses & Schedule Matrix</h2>
-            <span class="badge" style="background: rgba(56, 189, 248, 0.15); color: #38BDF8; font-size: 0.76rem; padding: 2px 8px; border-radius: 10px;">
+            <span class="badge" style="background: rgba(25, 114, 120, 0.18); color: var(--palette-stormy-teal); font-size: 0.76rem; padding: 2px 8px; border-radius: 10px;">
                 ${AppState.subjects.length} Subjects
             </span>
         </div>
@@ -75,10 +75,10 @@ export function renderTableView(container) {
             const dual = formatDualDate(dueDate);
             nextItemHtml = `
                 <div style="display: flex; flex-direction: column; gap: 1px;">
-                    <div style="font-weight: 600; color: #F8FAFC; font-size: 0.82rem; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(nextItem.title)}">
+                    <div style="font-weight: 600; color: var(--palette-powder-petal); font-size: 0.82rem; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(nextItem.title)}">
                         ${nextItem.kind === 'task' ? '📋' : '📅'} ${escapeHtml(nextItem.title)}
                     </div>
-                    <div style="font-size: 0.72rem; color: ${remaining.isUrgent ? '#F87171' : '#94A3B8'}; display: flex; align-items: center; gap: 6px;">
+                    <div style="font-size: 0.72rem; color: ${remaining.isUrgent ? 'var(--palette-tomato-jam)' : 'var(--text-muted)'}; display: flex; align-items: center; gap: 6px;">
                         <span>🗓️ ${dual ? dual.shamsiShort : ''}</span>
                         <span class="compact-urgency-badge ${remaining.urgencyLevel}">(${remaining.friendlyText})</span>
                     </div>
@@ -100,7 +100,7 @@ export function renderTableView(container) {
                 <div>
                     <div style="display: flex; align-items: center; gap: 6px;">
                         <span class="subject-table-title">${escapeHtml(subj.title)}</span>
-                        <button type="button" class="btn-edit-subj-name" title="Edit Subject Details" style="background: transparent; color: #38BDF8; cursor: pointer; padding: 2px;">
+                        <button type="button" class="btn-edit-subj-name" title="Edit Subject Details" style="background: transparent; color: var(--palette-stormy-teal); cursor: pointer; padding: 2px;">
                             ✏️
                         </button>
                     </div>

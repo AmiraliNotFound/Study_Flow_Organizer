@@ -15,7 +15,7 @@ export async function openBackupModal() {
     const dataDirText = document.getElementById('modalDataDirText');
 
     if (isConnected) {
-        if (statusDot) statusDot.style.background = '#10B981';
+        if (statusDot) statusDot.style.background = '#2dd4bf';
         if (statusText) statusText.textContent = '🟢 Connected to standard AppData directory on disk';
         try {
             const res = await fetch('/api/health');
@@ -25,7 +25,7 @@ export async function openBackupModal() {
             }
         } catch (e) {}
     } else {
-        if (statusDot) statusDot.style.background = '#F59E0B';
+        if (statusDot) statusDot.style.background = '#772E25';
         if (statusText) statusText.textContent = '🟠 Standalone Browser Mode (localStorage)';
         if (dataDirText) dataDirText.textContent = 'Browser Internal LocalStorage';
     }

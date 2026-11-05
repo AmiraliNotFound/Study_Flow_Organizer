@@ -150,10 +150,10 @@
 
             <div class="stats-counter-strip">
                 <div class="stat-item">Total: <span class="stat-value" id="statTotalTasks">0</span></div>
-                <div class="stat-item" style="color: #60A5FA;">Tasks: <span class="stat-value" id="statCountTasks">0</span></div>
-                <div class="stat-item" style="color: #C084FC;">Events: <span class="stat-value" id="statCountEvents">0</span></div>
-                <div class="stat-item" style="color: #F87171;">Urgent: <span class="stat-value" id="statUrgentTasks">0</span></div>
-                <div class="stat-item" style="color: #34D399;">Completed: <span class="stat-value" id="statCompletedTasks">0</span></div>
+                <div class="stat-item" style="color: var(--palette-stormy-teal);">Tasks: <span class="stat-value" id="statCountTasks">0</span></div>
+                <div class="stat-item" style="color: var(--palette-chestnut);">Events: <span class="stat-value" id="statCountEvents">0</span></div>
+                <div class="stat-item" style="color: var(--palette-tomato-jam);">Urgent: <span class="stat-value" id="statUrgentTasks">0</span></div>
+                <div class="stat-item" style="color: var(--color-success);">Completed: <span class="stat-value" id="statCompletedTasks">0</span></div>
             </div>
         </div>
     </div>
@@ -245,7 +245,7 @@
                         <div class="form-group" style="margin-top: 6px;">
                             <label class="form-label" for="itemNotesInput">
                                 <span>Notes & Checklists (Markdown supported):</span>
-                                <span style="font-size: 0.7rem; color: #38BDF8;">Supports - [ ] checklist items</span>
+                                <span style="font-size: 0.7rem; color: var(--palette-stormy-teal);">Supports - [ ] checklist items</span>
                             </label>
                             <textarea id="itemNotesInput" class="form-textarea" placeholder="e.g.&#10;- [ ] Read Chapter 4&#10;- [ ] Solve Problems 4.2 & 4.5&#10;Exam room: Hall 302"></textarea>
                         </div>
@@ -300,7 +300,7 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary btn-del hidden" id="btnDeleteSubject" style="color: #F87171; border-color: rgba(239, 68, 68, 0.4); margin-right: auto;">
+                    <button type="button" class="btn btn-secondary btn-del hidden" id="btnDeleteSubject" style="color: var(--palette-tomato-jam); border-color: rgba(196, 69, 54, 0.4); margin-right: auto;">
                         Delete
                     </button>
                     <button type="button" class="btn btn-secondary" id="btnCancelSubject">Cancel</button>
@@ -331,7 +331,7 @@
                     <div class="material-drop-box">
                         <label class="form-label">Folder Location:</label>
                         <div class="material-picker-row">
-                            <button type="button" class="btn btn-primary btn-sm" id="btnBrowseFolder" style="background: linear-gradient(135deg, #d97706, #b45309);">
+                            <button type="button" class="btn btn-primary btn-sm" id="btnBrowseFolder" style="background: var(--palette-chestnut);">
                                 📁 Select Folder from System
                             </button>
                             <button type="button" class="btn btn-secondary btn-sm" id="btnPasteFolderPath">
@@ -381,7 +381,7 @@
                             📂 Open in Explorer
                         </button>
                     </div>
-                    <div style="font-family: monospace; font-size: 0.75rem; color: #38BDF8; word-break: break-all; margin-top: 4px;" id="modalDataDirText">
+                    <div style="font-family: monospace; font-size: 0.75rem; color: var(--palette-stormy-teal); word-break: break-all; margin-top: 4px;" id="modalDataDirText">
                         Loading directory...
                     </div>
                     <p style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.5; margin-top: 6px;">
@@ -404,10 +404,10 @@
                     </div>
                 </div>
 
-                <div class="backup-action-card" style="border-color: rgba(239, 68, 68, 0.3);">
-                    <h4 style="color: #F87171;">Clear All Data</h4>
+                <div class="backup-action-card" style="border-color: rgba(196, 69, 54, 0.35);">
+                    <h4 style="color: var(--palette-tomato-jam);">Clear All Data</h4>
                     <p>Wipe all courses, tasks, and materials to start with a fresh clean workspace.</p>
-                    <button type="button" class="btn btn-secondary btn-sm" id="btnWipeData" style="color: #F87171; border-color: rgba(239, 68, 68, 0.4);">
+                    <button type="button" class="btn btn-secondary btn-sm" id="btnWipeData" style="color: var(--palette-tomato-jam); border-color: rgba(196, 69, 54, 0.45);">
                         Clear All
                     </button>
                 </div>

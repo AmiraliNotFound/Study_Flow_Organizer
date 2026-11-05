@@ -100,7 +100,7 @@ export function renderTimelineView(container) {
                 </div>
                 <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
                     <div style="flex: 1; min-width: 0;">
-                        <div style="font-weight: 700; font-size: 0.95rem; color: #F8FAFC; margin-bottom: 3px;">
+                        <div style="font-weight: 700; font-size: 0.95rem; color: var(--palette-powder-petal); margin-bottom: 3px;">
                             ${item.typeIcon || (isTask ? '📋' : '📅')} ${escapeHtml(item.title)}
                         </div>
                         <div style="font-size: 0.76rem; color: var(--text-muted); display: flex; align-items: center; gap: 8px;">

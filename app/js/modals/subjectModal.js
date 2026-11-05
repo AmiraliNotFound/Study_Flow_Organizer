@@ -54,8 +54,8 @@ function renderGradientPicker() {
         pill.style.borderRadius = '8px';
         pill.style.cursor = 'pointer';
         pill.style.transition = 'all 0.2s ease';
-        pill.style.border = index === selectedGradientIndex ? '2px solid #ffffff' : '1px solid rgba(255,255,255,0.2)';
-        pill.style.boxShadow = index === selectedGradientIndex ? '0 0 12px rgba(255,255,255,0.6)' : 'none';
+        pill.style.border = index === selectedGradientIndex ? '2px solid var(--palette-powder-petal)' : '1px solid rgba(237, 221, 212, 0.2)';
+        pill.style.boxShadow = index === selectedGradientIndex ? '0 0 12px var(--color-primary-glow)' : 'none';
 
         pill.addEventListener('click', () => {
             selectedGradientIndex = index;

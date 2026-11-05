@@ -36,28 +36,28 @@ export function renderKanbanView(container) {
             id: 'todo',
             title: 'To Do',
             icon: '📋',
-            color: '#60A5FA',
+            color: '#197278',
             items: []
         },
         {
             id: 'in_progress',
             title: 'In Progress',
             icon: '⏳',
-            color: '#FBBF24',
+            color: '#772E25',
             items: []
         },
         {
             id: 'urgent',
             title: 'Urgent (<48h)',
             icon: '🚨',
-            color: '#F87171',
+            color: '#C44536',
             items: []
         },
         {
             id: 'done',
             title: 'Completed',
             icon: '✅',
-            color: '#34D399',
+            color: '#2dd4bf',
             items: []
         }
     ];
