@@ -12,13 +12,13 @@
 /**
  * Study Flow Organizer - Pure Windows GUI Standalone Launcher
  * 
- * Compiles with: gcc -mwindows -O2 scripts/launcher.c -o Study_Flow_Organizer.exe -lws2_32
- * 
- * Guarantees:
- * 1. ZERO command prompt or console windows (Windows GUI subsystem)
- * 2. Background Node server spawned with CREATE_NO_WINDOW | DETACHED_PROCESS
- * 3. App launched in frameless, standalone desktop window via Edge or Chrome
- * 4. Automatic clean background server shutdown when window is closed
+ * Features:
+ * 1. 100% native Windows GUI subsystem (IMAGE_SUBSYSTEM_WINDOWS_GUI)
+ * 2. ZERO terminal or command prompt windows
+ * 3. Background server spawned silently with CREATE_NO_WINDOW | DETACHED_PROCESS
+ * 4. Resolves full path to node.exe via SearchPathW / Program Files
+ * 5. Embedded application icon (.ico)
+ * 6. Launches Edge/Chrome in dedicated app mode (--app=http://127.0.0.1:3456)
  */
 
 static int isPortOpen(int port) {
@@ -36,11 +36,27 @@ static int isPortOpen(int port) {
     addr.sin_port = htons((unsigned short)port);
     addr.sin_addr.s_addr = inet_addr("127.0.0.1");
 
-    // Quick non-blocking or 200ms timeout check
     int connected = (connect(s, (struct sockaddr *)&addr, sizeof(addr)) == 0);
     closesocket(s);
     WSACleanup();
     return connected;
+}
+
+static void findNode(wchar_t *outPath, size_t maxLen) {
+    if (SearchPathW(NULL, L"node.exe", NULL, maxLen, outPath, NULL) > 0) {
+        return;
+    }
+    const wchar_t *envProg = _wgetenv(L"ProgramFiles");
+    if (envProg) {
+        _snwprintf(outPath, maxLen, L"%s\\nodejs\\node.exe", envProg);
+        if (GetFileAttributesW(outPath) != INVALID_FILE_ATTRIBUTES) return;
+    }
+    const wchar_t *envProgX86 = _wgetenv(L"ProgramFiles(x86)");
+    if (envProgX86) {
+        _snwprintf(outPath, maxLen, L"%s\\nodejs\\node.exe", envProgX86);
+        if (GetFileAttributesW(outPath) != INVALID_FILE_ATTRIBUTES) return;
+    }
+    wcsncpy(outPath, L"node.exe", maxLen);
 }
 
 static void findBrowser(wchar_t *outPath, size_t maxLen) {
@@ -74,18 +90,19 @@ static void findBrowser(wchar_t *outPath, size_t maxLen) {
 }
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
-    // 1. Get path to folder where this exe is located
+    // 1. Get folder where this executable is located
     wchar_t exeDir[MAX_PATH];
     GetModuleFileNameW(NULL, exeDir, MAX_PATH);
     wchar_t *lastSlash = wcsrchr(exeDir, L'\\');
     if (lastSlash) *lastSlash = L'\0';
 
-    // 2. Check if server is already running on port 3456
-    HANDLE hServerProcess = NULL;
+    // 2. Start server in background if not already running on port 3456
     if (!isPortOpen(3456)) {
-        // Start server windowless
-        wchar_t nodeCmd[MAX_PATH * 2];
-        _snwprintf(nodeCmd, MAX_PATH * 2, L"node \"%s\\server\\server.js\"", exeDir);
+        wchar_t nodePath[MAX_PATH];
+        findNode(nodePath, MAX_PATH);
+
+        wchar_t nodeCmd[MAX_PATH * 3];
+        _snwprintf(nodeCmd, MAX_PATH * 3, L"\"%s\" \"%s\\server\\server.js\"", nodePath, exeDir);
 
         STARTUPINFOW siNode;
         PROCESS_INFORMATION piNode;
@@ -95,12 +112,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         siNode.wShowWindow = SW_HIDE;
         ZeroMemory(&piNode, sizeof(piNode));
 
-        // CREATE_NO_WINDOW (0x08000000) guarantees ZERO terminal windows
+        // 0x08000000 = CREATE_NO_WINDOW
         if (CreateProcessW(NULL, nodeCmd, NULL, NULL, FALSE, 0x08000000 | DETACHED_PROCESS, NULL, exeDir, &siNode, &piNode)) {
-            hServerProcess = piNode.hProcess;
             CloseHandle(piNode.hThread);
+            CloseHandle(piNode.hProcess);
 
-            // Wait up to 3 seconds for server to start listening
+            // Poll port 3456 for up to 3 seconds until server is ready
             for (int i = 0; i < 30; i++) {
                 Sleep(100);
                 if (isPortOpen(3456)) break;
@@ -108,7 +125,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         }
     }
 
-    // 3. Find Edge or Chrome to run in dedicated standalone app mode
+    // 3. Locate Edge or Chrome to run in dedicated standalone app mode
     wchar_t browserPath[MAX_PATH];
     findBrowser(browserPath, MAX_PATH);
 
@@ -122,10 +139,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     }
 
     if (browserPath[0] != L'\0') {
-        // Launch as a standalone desktop window
+        // Launch as a dedicated standalone desktop window
         wchar_t browserCmd[MAX_PATH * 3];
         _snwprintf(browserCmd, MAX_PATH * 3,
-            L"\"%s\" --app=http://127.0.0.1:3456 --user-data-dir=\"%s\" --window-size=1360,860 --no-first-run --no-default-browser-check",
+            L"\"%s\" --app=http://127.0.0.1:3456 --user-data-dir=\"%s\" --window-size=1360,860 --app-id=study_flow_organizer --no-first-run --no-default-browser-check",
             browserPath, profileDir);
 
         STARTUPINFOW siBrowser;
@@ -136,21 +153,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
         if (CreateProcessW(NULL, browserCmd, NULL, NULL, FALSE, 0, NULL, exeDir, &siBrowser, &piBrowser)) {
             CloseHandle(piBrowser.hThread);
-
-            // Wait until the user closes the desktop window
-            WaitForSingleObject(piBrowser.hProcess, INFINITE);
             CloseHandle(piBrowser.hProcess);
         }
     } else {
         // Fallback: Open in default browser
         ShellExecuteW(NULL, L"open", L"http://127.0.0.1:3456", NULL, NULL, SW_SHOWNORMAL);
-        return 0;
-    }
-
-    // 4. Clean shutdown of background server process when app window closes
-    if (hServerProcess != NULL) {
-        TerminateProcess(hServerProcess, 0);
-        CloseHandle(hServerProcess);
     }
 
     return 0;

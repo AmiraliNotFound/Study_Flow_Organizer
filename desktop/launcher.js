@@ -118,16 +118,11 @@ async function main() {
 
         const browserProcess = spawn(browserExe, browserArgs, {
             stdio: 'ignore',
-            detached: false,
+            detached: true,
             windowsHide: true
         });
 
-        browserProcess.on('exit', () => {
-            if (server) {
-                try { server.close(); } catch (e) {}
-            }
-            process.exit(0);
-        });
+        browserProcess.unref();
 
         browserProcess.on('error', () => {
             // Fallback to opening default system browser

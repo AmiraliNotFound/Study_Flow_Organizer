@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#344e4b"/>
+      <stop offset="100%" stop-color="#1d2d2c"/>
+    </linearGradient>
+    <linearGradient id="tealGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#248f97"/>
+      <stop offset="100%" stop-color="#197278"/>
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#d65545"/>
+      <stop offset="100%" stop-color="#C44536"/>
+    </linearGradient>
+    <filter id="dropGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#000000" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+
+  <!-- Base Rounded Squircle Background -->
+  <rect width="256" height="256" rx="54" fill="url(#bgGrad)"/>
+  <rect x="4" y="4" width="248" height="248" rx="50" fill="none" stroke="#EDDDD4" stroke-opacity="0.16" stroke-width="2"/>
+
+  <!-- Academic Mortarboard (Cap Diamond) -->
+  <g filter="url(#dropGlow)">
+    <polygon points="128,48 214,88 128,124 42,88" fill="url(#tealGrad)"/>
+    <polygon points="128,52 206,88 128,120 50,88" fill="none" stroke="#EDDDD4" stroke-opacity="0.3" stroke-width="1.5"/>
+
+    <!-- Mortarboard Skullcap Base -->
+    <path d="M72,102 L72,130 C72,148 96,160 128,160 C160,160 184,148 184,130 L184,102 L170,108 C158,118 143,124 128,124 C113,124 98,118 86,108 Z" fill="#135357"/>
+
+    <!-- Tassel Ribbon (Tomato Jam) -->
+    <path d="M200,90 L204,142 C204,146 201,150 197,152 L195,164 L205,164 L203,152" fill="url(#accentGrad)"/>
+    <circle cx="201" cy="144" r="3.5" fill="#EDDDD4"/>
+  </g>
+
+  <!-- Open Academic Book Pages (Powder Petal) -->
+  <g filter="url(#dropGlow)">
+    <!-- Left Page -->
+    <path d="M124,166 C98,154 62,156 46,164 C42,166 40,170 40,174 L40,206 C40,210 43,213 47,212 C64,204 98,202 124,214 Z" fill="#EDDDD4"/>
+    <path d="M54,178 C70,172 96,172 116,180" stroke="#283D3B" stroke-width="2.5" stroke-linecap="round" opacity="0.4"/>
+    <path d="M54,190 C70,184 96,184 116,192" stroke="#283D3B" stroke-width="2.5" stroke-linecap="round" opacity="0.4"/>
+
+    <!-- Right Page -->
+    <path d="M132,166 C158,154 194,156 210,164 C214,166 216,170 216,174 L216,206 C216,210 213,213 209,212 C192,204 158,202 132,214 Z" fill="#EDDDD4"/>
+    <path d="M140,180 C160,172 186,172 202,178" stroke="#283D3B" stroke-width="2.5" stroke-linecap="round" opacity="0.4"/>
+    <path d="M140,192 C160,184 186,184 202,190" stroke="#283D3B" stroke-width="2.5" stroke-linecap="round" opacity="0.4"/>
+
+    <!-- Book Spine Center Marker -->
+    <polygon points="125,167 131,167 131,215 125,215" fill="#772E25"/>
+  </g>
+</svg>
