@@ -16,7 +16,10 @@ export function isServerConnected() {
  */
 export async function checkServerHealth() {
     try {
-        const res = await fetch('/api/health', { method: 'GET', signal: AbortSignal.timeout(1500) });
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 1800);
+        const res = await fetch('/api/health', { method: 'GET', signal: controller.signal });
+        clearTimeout(timeoutId);
         if (res.ok) {
             const data = await res.json();
             serverConnected = data.status === 'ok';
@@ -35,7 +38,10 @@ export async function loadData() {
     const isOnline = await checkServerHealth();
     if (isOnline) {
         try {
-            const res = await fetch('/api/data');
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 2000);
+            const res = await fetch('/api/data', { signal: controller.signal });
+            clearTimeout(timeoutId);
             if (res.ok) {
                 const json = await res.json();
                 if (json.success && json.data) {
@@ -108,6 +114,18 @@ export async function openFolder(folderPath) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ folderPath })
         });
+        return await res.json();
+    } catch (e) {
+        return { success: false, error: e.message };
+    }
+}
+
+/**
+ * Open standard AppData storage directory in Windows File Explorer.
+ */
+export async function openDataDirectory() {
+    try {
+        const res = await fetch('/api/open-data-dir', { method: 'POST' });
         return await res.json();
     } catch (e) {
         return { success: false, error: e.message };

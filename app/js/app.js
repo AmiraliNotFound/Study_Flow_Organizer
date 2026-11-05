@@ -302,10 +302,18 @@ window.addEventListener('DOMContentLoaded', async () => {
         renderActiveView();
     });
 
-    const result = await loadData();
-    if (result.success && result.data) {
-        setAppStateData(result.data);
-    } else {
+    // Render immediately so headers, date, and views display instantly
+    renderActiveView();
+
+    try {
+        const result = await loadData();
+        if (result && result.success && result.data) {
+            setAppStateData(result.data);
+        } else {
+            renderActiveView();
+        }
+    } catch (e) {
+        console.warn('[App] Initial data load error:', e);
         renderActiveView();
     }
 
