@@ -212,20 +212,11 @@ function initAppEvents() {
         }
     });
 
-    // 3. Storage & Settings Modals
+    // 3. Settings & Storage Modal
     document.getElementById('diskSyncBadge')?.addEventListener('click', openBackupModal);
-    document.getElementById('btnBackupModalHeader')?.addEventListener('click', openBackupModal);
-
-    const settingsModal = document.getElementById('settingsModal');
-    document.getElementById('btnSettingsHeader')?.addEventListener('click', () => {
-        settingsModal?.classList.add('is-active');
-    });
-    document.getElementById('settingsModalCloseBtn')?.addEventListener('click', () => {
-        settingsModal?.classList.remove('is-active');
-    });
-    document.getElementById('btnCloseSettings')?.addEventListener('click', () => {
-        settingsModal?.classList.remove('is-active');
-    });
+    document.getElementById('btnSettingsHeader')?.addEventListener('click', openBackupModal);
+    document.getElementById('settingsModalCloseBtn')?.addEventListener('click', closeBackupModal);
+    document.getElementById('btnCloseSettings')?.addEventListener('click', closeBackupModal);
 
     // Theme Switcher Options inside Settings
     document.getElementById('themeOptionGlass')?.addEventListener('click', () => applyTheme('glass'));

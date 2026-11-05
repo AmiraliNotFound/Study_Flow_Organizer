@@ -6,7 +6,7 @@ import { AppState, setAppStateData, persistCurrentState } from '../state.js';
 import { isServerConnected } from '../api.js';
 
 export async function openBackupModal() {
-    const modal = document.getElementById('backupModal');
+    const modal = document.getElementById('settingsModal') || document.getElementById('backupModal');
     if (!modal) return;
 
     const isConnected = isServerConnected();
@@ -34,7 +34,7 @@ export async function openBackupModal() {
 }
 
 export function closeBackupModal() {
-    const modal = document.getElementById('backupModal');
+    const modal = document.getElementById('settingsModal') || document.getElementById('backupModal');
     if (modal) modal.classList.remove('is-active');
 }
 

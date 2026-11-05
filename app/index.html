@@ -87,11 +87,8 @@
                     </div>
                 </div>
 
-                <!-- Storage & Settings -->
-                <button type="button" class="btn btn-secondary btn-sm" id="btnBackupModalHeader" title="AppData Storage & Backup">
-                    <span>💾 Storage</span>
-                </button>
-                <button type="button" class="btn btn-secondary btn-sm" id="btnSettingsHeader" title="Settings & Visual Preferences">
+                <!-- Settings (Includes Theme, Local AppData Storage & Shortcuts) -->
+                <button type="button" class="btn btn-secondary btn-sm" id="btnSettingsHeader" title="Settings & Storage">
                     <span>⚙️ Settings</span>
                 </button>
             </div>
@@ -362,69 +359,12 @@
     </div>
 
     <!-- ========================================================================
-         MODAL 4: DISK STORAGE & BACKUP MANAGEMENT
-         ======================================================================== -->
-    <div id="backupModal" class="modal-overlay">
-        <div class="modal-window" style="max-width: 580px;">
-            <div class="modal-header">
-                <h2>Local Storage & Data Management</h2>
-                <button type="button" class="modal-close-btn" id="backupModalCloseBtn">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="disk-sync-box">
-                    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <span id="modalDiskSyncDot" style="width: 10px; height: 10px; border-radius: 50%; display: inline-block;"></span>
-                            <strong id="modalDiskSyncText" style="font-size: 0.88rem;">Checking status...</strong>
-                        </div>
-                        <button type="button" class="btn btn-sm btn-outline-cyan" id="btnOpenDataFolder">
-                            📂 Open in Explorer
-                        </button>
-                    </div>
-                    <div style="font-family: monospace; font-size: 0.75rem; color: var(--palette-stormy-teal); word-break: break-all; margin-top: 4px;" id="modalDataDirText">
-                        Loading directory...
-                    </div>
-                    <p style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.5; margin-top: 6px;">
-                        Data is safely saved in the standard OS AppData directory, keeping it permanent and separate from repository updates. Automatic timestamped snapshots are saved in <strong>backups/</strong>.
-                    </p>
-                </div>
-
-                <div class="backup-actions-grid">
-                    <div class="backup-action-card">
-                        <h4>Export JSON Backup</h4>
-                        <p>Download a complete standalone structured v4 JSON file.</p>
-                        <button type="button" class="btn btn-secondary btn-sm" id="btnExportJson">Download File</button>
-                    </div>
-
-                    <div class="backup-action-card">
-                        <h4>Restore from JSON</h4>
-                        <p>Import a previously saved backup file directly into active database.</p>
-                        <button type="button" class="btn btn-secondary btn-sm" id="btnImportJson">Select File</button>
-                        <input type="file" id="importJsonFileInput" accept=".json" style="display: none;">
-                    </div>
-                </div>
-
-                <div class="backup-action-card" style="border-color: rgba(196, 69, 54, 0.35);">
-                    <h4 style="color: var(--palette-tomato-jam);">Clear All Data</h4>
-                    <p>Wipe all courses, tasks, and materials to start with a fresh clean workspace.</p>
-                    <button type="button" class="btn btn-secondary btn-sm" id="btnWipeData" style="color: var(--palette-tomato-jam); border-color: rgba(196, 69, 54, 0.45);">
-                        Clear All
-                    </button>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-primary" id="btnCloseBackupModal">Close</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- ========================================================================
-         MODAL 5: SETTINGS & PREFERENCES (With Embedded Keyboard Shortcuts)
+         MODAL 4: SETTINGS & STORAGE PREFERENCES (With Embedded Shortcuts)
          ======================================================================== -->
     <div id="settingsModal" class="modal-overlay">
-        <div class="modal-window" style="max-width: 540px;">
+        <div class="modal-window" style="max-width: 560px;">
             <div class="modal-header">
-                <h2>Settings & Preferences</h2>
+                <h2>⚙️ Settings & Storage</h2>
                 <button type="button" class="modal-close-btn" id="settingsModalCloseBtn">&times;</button>
             </div>
             <div class="modal-body" style="gap: 16px;">
@@ -447,18 +387,42 @@
                     </div>
                 </div>
 
-                <!-- Storage & Data Shortcut -->
-                <div class="disk-sync-box" style="margin: 0; padding: 12px 14px;">
-                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
-                        <div>
-                            <strong style="font-size: 0.88rem; color: var(--palette-powder-petal);">Local AppData Storage</strong>
-                            <p style="font-size: 0.76rem; color: var(--text-muted); margin-top: 2px;">
-                                Persistent OS database decoupled from git updates
-                            </p>
+                <!-- Local AppData Storage & Backup Management (Moved to Settings) -->
+                <div class="form-group">
+                    <label class="form-label" style="font-weight: 700; color: var(--palette-powder-petal);">
+                        Local AppData Storage & Backups:
+                    </label>
+                    <div class="disk-sync-box" style="margin: 0; padding: 14px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span id="modalDiskSyncDot" style="width: 10px; height: 10px; border-radius: 50%; background: #2dd4bf; display: inline-block;"></span>
+                                <strong id="modalDiskSyncText" style="font-size: 0.86rem; color: var(--palette-powder-petal);">Checking status...</strong>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-cyan" id="btnOpenDataFolder">
+                                📂 Explorer
+                            </button>
                         </div>
-                        <button type="button" class="btn btn-sm btn-outline-cyan" id="btnSettingsOpenFolder">
-                            📂 Explorer
-                        </button>
+                        <div style="font-family: monospace; font-size: 0.73rem; color: var(--palette-stormy-teal); word-break: break-all; margin-top: 5px;" id="modalDataDirText">
+                            Loading directory...
+                        </div>
+                        <p style="font-size: 0.76rem; color: var(--text-muted); line-height: 1.45; margin-top: 6px;">
+                            Data is permanently saved in your OS AppData directory, keeping it safe and independent from git updates.
+                        </p>
+                        <div style="display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap;">
+                            <button type="button" class="btn btn-secondary btn-sm" id="btnExportJson" style="flex: 1; min-width: 130px;">
+                                💾 Export Backup
+                            </button>
+                            <button type="button" class="btn btn-secondary btn-sm" id="btnImportJson" style="flex: 1; min-width: 130px;">
+                                📥 Restore JSON
+                            </button>
+                            <input type="file" id="importJsonFileInput" accept=".json" style="display: none;">
+                        </div>
+                        <div style="margin-top: 10px; border-top: 1px solid rgba(237, 221, 212, 0.08); padding-top: 8px; display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.74rem; color: var(--text-muted);">Reset workspace:</span>
+                            <button type="button" class="btn btn-secondary btn-sm" id="btnWipeData" style="color: var(--palette-tomato-jam); border-color: rgba(196, 69, 54, 0.45); font-size: 0.74rem; padding: 3px 10px;">
+                                Clear All Data
+                            </button>
+                        </div>
                     </div>
                 </div>
 
