@@ -1,0 +1,34 @@
+/* ==========================================================================
+   DESIGN SYSTEM & THEME VARIABLES (Dark Blue Theme & Glassmorphism)
+   ========================================================================== */
+:root {
+    --bg-navy: #0A2540;
+    --bg-navy-deep: #061628;
+    --card-slate: #103358;
+    --card-slate-glass: rgba(16, 51, 88, 0.72);
+    --card-slate-border: rgba(255, 255, 255, 0.12);
+    --card-hover-border: rgba(48, 131, 205, 0.5);
+    
+    --blue-gradient-start: #20639B;
+    --blue-gradient-end: #3083CD;
+    --blue-accent-cyan: #00d2d3;
+    --blue-glow: rgba(48, 131, 205, 0.35);
+    
+    --urgent-amber: #F59E0B;
+    --urgent-red: #EF4444;
+    --urgent-glow: rgba(239, 68, 68, 0.6);
+    --success-emerald: #10B981;
+    
+    --text-primary: #F8FAFC;
+    --text-secondary: #CBD5E1;
+    --text-muted: #94A3B8;
+    --text-subtle: #64748B;
+
+    --radius-sm: 8px;
+    --radius-md: 14px;
+    --radius-lg: 20px;
+    --radius-xl: 26px;
+
+    --transition-smooth: all 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
