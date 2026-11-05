@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="./css/components.css">
     <link rel="stylesheet" href="./css/views.css">
     <link rel="stylesheet" href="./css/modals.css">
+    <link rel="stylesheet" href="./css/custom-controls.css">
 </head>
 <body>
 
@@ -29,13 +30,14 @@
                 </div>
                 <div class="brand-info">
                     <h1>Study Flow Organizer</h1>
-                    <p id="headerCurrentDateText">Smart Academic Schedule & Folders Hub</p>
+                    <!-- Dual Date Indicator: Gregorian + Shamsi -->
+                    <p id="headerCurrentDateText">Loading calendar...</p>
                 </div>
             </div>
 
             <div class="header-actions">
-                <!-- Direct Disk Sync Badge -->
-                <div class="disk-sync-badge unlinked" id="diskSyncBadge" title="Live Local Database Connection">
+                <!-- Standard AppData Disk Sync Badge -->
+                <div class="disk-sync-badge unlinked" id="diskSyncBadge" title="Standard Local Database Storage (%APPDATA%\StudyFlowOrganizer)">
                     <span class="disk-sync-dot"></span>
                     <span id="diskSyncText">Checking Server...</span>
                 </div>
@@ -54,11 +56,8 @@
                     <span>+ Subject</span>
                 </button>
 
-                <!-- System & Utilities -->
-                <button type="button" class="btn btn-outline-cyan btn-sm" id="btnGitSyncHeader" title="Automated GitHub Sync">
-                    <span>🚀 Git</span>
-                </button>
-                <button type="button" class="btn btn-secondary btn-sm" id="btnBackupModalHeader" title="Disk Storage & Backup Management">
+                <!-- Storage & Shortcuts -->
+                <button type="button" class="btn btn-secondary btn-sm" id="btnBackupModalHeader" title="AppData Storage & Backup">
                     <span>💾 Storage</span>
                 </button>
                 <button type="button" class="btn btn-secondary btn-icon" id="btnShortcutsHeader" title="Keyboard Shortcuts">
@@ -89,16 +88,19 @@
                 <button type="button" id="clearSearchBtn" class="search-clear">&times;</button>
             </div>
 
-            <!-- View Switcher -->
+            <!-- View Switcher: Cards, Matrix, Timeline, Kanban -->
             <div class="view-switcher">
-                <button type="button" class="view-tab-btn active" data-view="grid" title="Cards View">
-                    <span>🗂️ Cards View</span>
+                <button type="button" class="view-tab-btn active" data-view="grid" title="Cards Grid View">
+                    <span>🗂️ Cards</span>
                 </button>
-                <button type="button" class="view-tab-btn" data-view="table" title="Courses & Schedule Matrix">
-                    <span>📑 Matrix View</span>
+                <button type="button" class="view-tab-btn" data-view="table" title="Schedule Matrix Table">
+                    <span>📑 Matrix</span>
                 </button>
-                <button type="button" class="view-tab-btn" data-view="timeline" title="Proportional Deadlines Timeline">
+                <button type="button" class="view-tab-btn" data-view="timeline" title="Proportional Timeline">
                     <span>⏳ Timeline</span>
+                </button>
+                <button type="button" class="view-tab-btn" data-view="kanban" title="Interactive Kanban Board">
+                    <span>📌 Kanban</span>
                 </button>
             </div>
         </div>
@@ -136,10 +138,14 @@
 
         <!-- 3. Proportional Timeline View -->
         <div id="timelineContentView" class="timeline-view-wrapper hidden"></div>
+
+        <!-- 4. Interactive Kanban Board View -->
+        <div id="kanbanContentView" class="kanban-view-wrapper hidden"></div>
     </main>
 
     <!-- ========================================================================
          MODAL 1: ADD / EDIT ITEM (TASK VS EVENT)
+         Featuring Custom Dual Calendar (Gregorian + Shamsi) & Custom Time Picker
          ======================================================================== -->
     <div id="itemModal" class="modal-overlay">
         <div class="modal-window">
@@ -202,16 +208,21 @@
                             </div>
                         </div>
 
-                        <!-- Notes & Instructions -->
+                        <!-- Notes & Markdown Checklists -->
                         <div class="form-group" style="margin-top: 6px;">
-                            <label class="form-label" for="itemNotesInput">Notes / Instructions / Topics (Optional):</label>
-                            <textarea id="itemNotesInput" class="form-textarea" placeholder="Chapters, attached materials, grading criteria..."></textarea>
+                            <label class="form-label" for="itemNotesInput">
+                                <span>Notes & Checklists (Markdown supported):</span>
+                                <span style="font-size: 0.7rem; color: #38BDF8;">Supports - [ ] checklist items</span>
+                            </label>
+                            <textarea id="itemNotesInput" class="form-textarea" placeholder="e.g.&#10;- [ ] Read Chapter 4&#10;- [ ] Solve Problems 4.2 & 4.5&#10;Exam room: Hall 302"></textarea>
                         </div>
                     </div>
 
-                    <!-- Target Due Date & Time -->
+                    <!-- Custom Dual Date & Time Picker Section -->
                     <div class="form-group">
-                        <label class="form-label">Target Due Date & Time:</label>
+                        <label class="form-label">
+                            <span>Target Due Date (شمسی و میلادی):</span>
+                        </label>
                         <div class="dual-date-picker-box">
                             <div class="date-shortcuts-row">
                                 <span style="font-size: 0.74rem; color: var(--text-muted);">Presets:</span>
@@ -222,21 +233,11 @@
                                 <button type="button" class="date-shortcut-btn" id="presetBtn7">In 1 Week</button>
                             </div>
 
-                            <div class="date-inputs-row">
-                                <input type="date" id="itemDateInput" class="form-input" required>
-                                <input type="time" id="itemTimeInput" class="form-input" value="23:59" required>
-                            </div>
+                            <!-- Custom Dual Date Picker Slot (Gregorian + Shamsi) -->
+                            <div id="customDatePickerSlot"></div>
 
-                            <div class="date-sync-preview">
-                                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
-                                    <div style="display: flex; align-items: center; gap: 6px;">
-                                        <span>🗓️</span>
-                                        <span id="previewDayOfWeekTag" style="color: #38BDF8; font-weight: 700;">-</span>
-                                    </div>
-                                    <strong id="previewGregorianDate" style="color: #E2E8F0; font-family: monospace;">-</strong>
-                                </div>
-                                <div id="previewRemainingTime" style="font-size: 0.78rem; color: #94A3B8;">Calculating countdown...</div>
-                            </div>
+                            <!-- Custom Time Picker Slot -->
+                            <div id="customTimePickerSlot"></div>
                         </div>
                     </div>
                 </div>
@@ -317,7 +318,7 @@
                         </div>
                         <div class="form-group">
                             <label class="form-label" style="font-size: 0.74rem;">Folder Path on Disk:</label>
-                            <input type="text" id="folderPathInput" class="form-input" placeholder="e.g. D:\University\Mechanical Engineering\Course" required>
+                            <input type="text" id="folderPathInput" class="form-input" placeholder="e.g. D:\University\Course\Materials" required>
                         </div>
                     </div>
 
@@ -335,70 +336,7 @@
     </div>
 
     <!-- ========================================================================
-         MODAL 4: GITHUB SYNC DASHBOARD
-         ======================================================================== -->
-    <div id="gitSyncModal" class="modal-overlay">
-        <div class="modal-window" style="max-width: 600px;">
-            <div class="modal-header">
-                <div>
-                    <h2>🚀 GitHub Automation Dashboard</h2>
-                    <p style="font-size: 0.76rem; color: var(--text-muted); margin-top: 2px;">
-                        Commit and synchronize subjects and schedule directly with Git
-                    </p>
-                </div>
-                <button type="button" class="modal-close-btn" id="gitSyncModalCloseBtn">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div style="background: rgba(6, 22, 40, 0.65); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 10px; padding: 12px 16px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                        <span style="font-size: 0.72rem; text-transform: uppercase; color: var(--text-muted); font-weight: 700;">Remote Origin</span>
-                        <span class="badge" id="gitModalBranchBadge" style="background: rgba(16, 185, 129, 0.2); color: #34D399; font-size: 0.72rem; padding: 2px 8px; border-radius: 6px;">Connected</span>
-                    </div>
-                    <div id="gitModalRemoteText" style="font-family: monospace; font-size: 0.82rem; color: #38BDF8; word-break: break-all;">
-                        Checking remote...
-                    </div>
-                </div>
-
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
-                    <div style="background: rgba(16, 51, 88, 0.4); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 10px; text-align: center;">
-                        <div style="font-size: 1.25rem; font-weight: 800; color: #38BDF8;" id="gitModalSubjCount">0</div>
-                        <div style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase;">Subjects</div>
-                    </div>
-                    <div style="background: rgba(16, 51, 88, 0.4); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 10px; text-align: center;">
-                        <div style="font-size: 1.25rem; font-weight: 800; color: #A78BFA;" id="gitModalItemsCount">0</div>
-                        <div style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase;">Tasks & Events</div>
-                    </div>
-                    <div style="background: rgba(16, 51, 88, 0.4); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 10px; text-align: center;">
-                        <div style="font-size: 1.25rem; font-weight: 800; color: #FCD34D;" id="gitModalFoldersCount">0</div>
-                        <div style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase;">Folders</div>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label" for="gitCommitMessageInput">Custom Commit Message:</label>
-                    <input type="text" id="gitCommitMessageInput" class="form-input" placeholder="e.g. Add Fluid Mechanics homework and syllabus">
-                </div>
-
-                <div style="display: flex; flex-direction: column; gap: 8px;">
-                    <button type="button" class="btn btn-primary" id="btnTriggerGitPush" style="background: linear-gradient(135deg, #0284c7, #0369a1); font-weight: 700; padding: 10px;">
-                        ⚡ Automated One-Click Push to GitHub
-                    </button>
-                    <button type="button" class="btn btn-secondary" id="btnTriggerGitPull" style="background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.4); color: #34D399; font-weight: 700;">
-                        🔄 Safe Pull from GitHub (Preserves Your Data)
-                    </button>
-                    <button type="button" class="btn btn-secondary btn-sm" id="btnCopyGitCmd">
-                        📋 Copy Git CLI Command
-                    </button>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" id="btnCloseGitModal">Close</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- ========================================================================
-         MODAL 5: DISK STORAGE & BACKUP MANAGEMENT
+         MODAL 4: DISK STORAGE & BACKUP MANAGEMENT
          ======================================================================== -->
     <div id="backupModal" class="modal-overlay">
         <div class="modal-window" style="max-width: 580px;">
@@ -408,12 +346,20 @@
             </div>
             <div class="modal-body">
                 <div class="disk-sync-box">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span id="modalDiskSyncDot" style="width: 10px; height: 10px; border-radius: 50%; display: inline-block;"></span>
-                        <strong id="modalDiskSyncText" style="font-size: 0.88rem;">Checking status...</strong>
+                    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span id="modalDiskSyncDot" style="width: 10px; height: 10px; border-radius: 50%; display: inline-block;"></span>
+                            <strong id="modalDiskSyncText" style="font-size: 0.88rem;">Checking status...</strong>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-cyan" id="btnOpenDataFolder">
+                            📂 Open in Explorer
+                        </button>
                     </div>
-                    <p style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.5;">
-                        When running with the local server, all changes save automatically to <strong>data/study_flow_data.json</strong> on disk with automatic safety backups in <strong>data/backups/</strong>.
+                    <div style="font-family: monospace; font-size: 0.75rem; color: #38BDF8; word-break: break-all; margin-top: 4px;" id="modalDataDirText">
+                        Loading directory...
+                    </div>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.5; margin-top: 6px;">
+                        Data is safely saved in the standard OS AppData directory, keeping it permanent and separate from repository updates. Automatic timestamped snapshots are saved in <strong>backups/</strong>.
                     </p>
                 </div>
 
@@ -447,7 +393,7 @@
     </div>
 
     <!-- ========================================================================
-         MODAL 6: KEYBOARD SHORTCUTS
+         MODAL 5: KEYBOARD SHORTCUTS
          ======================================================================== -->
     <div id="shortcutsModal" class="modal-overlay">
         <div class="modal-window" style="max-width: 480px;">
@@ -465,7 +411,7 @@
                     <kbd style="background: rgba(16, 51, 88, 0.8); border: 1px solid var(--card-slate-border); padding: 3px 8px; border-radius: 6px; font-family: monospace; font-size: 0.8rem;">/ or Ctrl + F</kbd>
                 </div>
                 <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.06);">
-                    <span style="font-size: 0.85rem; color: var(--text-secondary);">Switch View (Cards / Matrix / Timeline)</span>
+                    <span style="font-size: 0.85rem; color: var(--text-secondary);">Switch View (Cards / Matrix / Timeline / Kanban)</span>
                     <kbd style="background: rgba(16, 51, 88, 0.8); border: 1px solid var(--card-slate-border); padding: 3px 8px; border-radius: 6px; font-family: monospace; font-size: 0.8rem;">Ctrl + Shift + V</kbd>
                 </div>
                 <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 0;">

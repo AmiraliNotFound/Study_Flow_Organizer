@@ -1,9 +1,12 @@
 /**
  * Add / Edit Item (Task or Event) Modal Controller
+ * Featuring Custom Dual Calendar (Gregorian + Shamsi) & Custom Time Picker
  */
 
 import { AppState, addOrUpdateItem } from '../state.js';
-import { formatDate, calculateRemainingTime, getDatePreset } from '../dateUtils.js';
+import { getDatePreset } from '../dateUtils.js';
+import { initCustomDatePicker, getSelectedDate, setSelectedDate, updateSelectorsFromDate } from '../components/customDatePicker.js';
+import { initCustomTimePicker, getSelectedTime, setSelectedTime } from '../components/customTimePicker.js';
 
 let activeItemId = null;
 let activeKind = 'task';
@@ -46,23 +49,23 @@ export function openItemModal(itemId = null, preselectedSubjectId = null, defaul
             document.getElementById('itemNotesInput').value = item.extraInfo?.notes || '';
 
             const d = new Date(item.dueDate);
-            const dateStr = d.toISOString().slice(0, 10);
-            const timeStr = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-            document.getElementById('itemDateInput').value = dateStr;
-            document.getElementById('itemTimeInput').value = timeStr;
+            setSelectedDate(d);
+            setSelectedTime(d.getHours(), d.getMinutes());
         }
     } else {
         modalTitle.textContent = defaultKind === 'task' ? 'Add Task' : 'Add Event';
         if (preselectedSubjectId) {
             subjectSelect.value = preselectedSubjectId;
         }
-        // Default date: Tomorrow 23:59
-        applyDatePreset(1, 23, 59);
+        // Default: Tomorrow at 23:59
+        const tomorrow = getDatePreset(1, 23, 59);
+        setSelectedDate(tomorrow);
+        setSelectedTime(23, 59);
     }
 
     setKind(activeKind);
     updateTypePills();
-    updateDatePreview();
+    updateSelectorsFromDate();
 
     modal.classList.add('is-active');
 }
@@ -120,7 +123,7 @@ function updateTypePills() {
 
 function autoUpdateTitle() {
     const titleInput = document.getElementById('itemTitleInput');
-    if (activeItemId) return; // Don't overwrite existing title when editing
+    if (activeItemId) return;
 
     const types = activeKind === 'task' ? AppState.config.taskTypes : AppState.config.eventTypes;
     const typeObj = types.find(t => t.id === activeTypeId) || types[0];
@@ -137,56 +140,31 @@ function autoUpdateTitle() {
 
 export function applyDatePreset(daysAhead, hours, minutes) {
     const preset = getDatePreset(daysAhead, hours, minutes);
-    const dateInput = document.getElementById('itemDateInput');
-    const timeInput = document.getElementById('itemTimeInput');
-    if (dateInput && timeInput) {
-        dateInput.value = preset.toISOString().slice(0, 10);
-        timeInput.value = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-        updateDatePreview();
-    }
-}
-
-export function updateDatePreview() {
-    const dateInput = document.getElementById('itemDateInput');
-    const timeInput = document.getElementById('itemTimeInput');
-    const previewDate = document.getElementById('previewGregorianDate');
-    const previewRemaining = document.getElementById('previewRemainingTime');
-    const previewDayOfWeek = document.getElementById('previewDayOfWeekTag');
-
-    if (!dateInput || !timeInput || !previewDate) return;
-
-    const dateVal = dateInput.value;
-    const timeVal = timeInput.value || '23:59';
-    if (!dateVal) return;
-
-    const [y, m, d] = dateVal.split('-').map(Number);
-    const [hh, mm] = timeVal.split(':').map(Number);
-    const targetDate = new Date(y, m - 1, d, hh, mm, 0);
-
-    const formatted = formatDate(targetDate);
-    const remaining = calculateRemainingTime(targetDate);
-
-    previewDate.textContent = formatted.fullDisplay;
-    if (previewDayOfWeek) previewDayOfWeek.textContent = formatted.weekday;
-
-    if (previewRemaining) {
-        previewRemaining.textContent = remaining.isUrgent
-            ? `🚨 ${remaining.friendlyText}`
-            : `⏳ ${remaining.friendlyText}`;
-        previewRemaining.style.color = remaining.isUrgent ? '#F87171' : '#94A3B8';
-    }
+    setSelectedDate(preset);
+    setSelectedTime(hours, minutes);
 }
 
 export function initItemModalEvents() {
+    // 1. Initialize Custom Dual Date Picker (Gregorian + Shamsi)
+    const dateContainer = document.getElementById('customDatePickerSlot');
+    if (dateContainer) {
+        initCustomDatePicker(dateContainer);
+    }
+
+    // 2. Initialize Custom Time Picker
+    const timeContainer = document.getElementById('customTimePickerSlot');
+    if (timeContainer) {
+        initCustomTimePicker(timeContainer);
+    }
+
+    // Segmented tab
     document.getElementById('btnKindTask')?.addEventListener('click', () => setKind('task'));
     document.getElementById('btnKindEvent')?.addEventListener('click', () => setKind('event'));
 
     document.getElementById('taskDetailNumber')?.addEventListener('input', autoUpdateTitle);
     document.getElementById('eventDetailNumber')?.addEventListener('input', autoUpdateTitle);
 
-    document.getElementById('itemDateInput')?.addEventListener('change', updateDatePreview);
-    document.getElementById('itemTimeInput')?.addEventListener('change', updateDatePreview);
-
+    // Date presets
     document.getElementById('presetBtn0')?.addEventListener('click', () => applyDatePreset(0, 23, 59));
     document.getElementById('presetBtn1')?.addEventListener('click', () => applyDatePreset(1, 23, 59));
     document.getElementById('presetBtn2')?.addEventListener('click', () => applyDatePreset(2, 23, 59));
@@ -196,25 +174,22 @@ export function initItemModalEvents() {
     document.getElementById('itemModalCloseBtn')?.addEventListener('click', closeItemModal);
     document.getElementById('btnCancelItem')?.addEventListener('click', closeItemModal);
 
+    // Form submission
     document.getElementById('itemForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const subjectId = document.getElementById('itemSubjectSelect').value;
         const title = document.getElementById('itemTitleInput').value.trim();
-        const dateVal = document.getElementById('itemDateInput').value;
-        const timeVal = document.getElementById('itemTimeInput').value || '23:59';
 
         if (!title) {
             alert('Title is required');
             return;
         }
-        if (!dateVal) {
-            alert('Due date is required');
-            return;
-        }
 
-        const [y, m, d] = dateVal.split('-').map(Number);
-        const [hh, mm] = timeVal.split(':').map(Number);
-        const dueDate = new Date(y, m - 1, d, hh, mm, 0).toISOString();
+        const dateObj = getSelectedDate();
+        const { hours, minutes } = getSelectedTime();
+        dateObj.setHours(hours, minutes, 0, 0);
+
+        const dueDate = dateObj.toISOString();
 
         const types = activeKind === 'task' ? AppState.config.taskTypes : AppState.config.eventTypes;
         const matchedType = types.find(t => t.id === activeTypeId) || types[0];

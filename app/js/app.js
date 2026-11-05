@@ -1,19 +1,20 @@
 /**
- * Study Flow Organizer v4.0 - Main Application Controller
+ * Study Flow Organizer v4.1 - Main Application Controller
  */
 
 import { AppState, subscribe, setAppStateData } from './state.js';
 import { loadData, isServerConnected } from './api.js';
 import { formatDate } from './dateUtils.js';
+import { formatDualDate } from './jalali.js';
 
 import { renderCardsView } from './views/cardsView.js';
 import { renderTableView } from './views/tableView.js';
 import { renderTimelineView } from './views/timelineView.js';
+import { renderKanbanView } from './views/kanbanView.js';
 
 import { openItemModal, initItemModalEvents } from './modals/itemModal.js';
 import { openSubjectModal, initSubjectModalEvents } from './modals/subjectModal.js';
 import { openFolderModal, initFolderModalEvents } from './modals/folderModal.js';
-import { openGitModal, initGitModalEvents } from './modals/gitModal.js';
 import { openBackupModal, initBackupModalEvents } from './modals/backupModal.js';
 
 // Renders the currently selected view
@@ -21,12 +22,14 @@ export function renderActiveView() {
     const gridContainer = document.getElementById('gridContentView');
     const tableContainer = document.getElementById('tableContentView');
     const timelineContainer = document.getElementById('timelineContentView');
+    const kanbanContainer = document.getElementById('kanbanContentView');
 
-    if (!gridContainer || !tableContainer || !timelineContainer) return;
+    if (!gridContainer || !tableContainer || !timelineContainer || !kanbanContainer) return;
 
     gridContainer.classList.toggle('hidden', AppState.currentView !== 'grid');
     tableContainer.classList.toggle('hidden', AppState.currentView !== 'table');
     timelineContainer.classList.toggle('hidden', AppState.currentView !== 'timeline');
+    kanbanContainer.classList.toggle('hidden', AppState.currentView !== 'kanban');
 
     if (AppState.currentView === 'grid') {
         renderCardsView(gridContainer);
@@ -34,10 +37,30 @@ export function renderActiveView() {
         renderTableView(tableContainer);
     } else if (AppState.currentView === 'timeline') {
         renderTimelineView(timelineContainer);
+    } else if (AppState.currentView === 'kanban') {
+        renderKanbanView(kanbanContainer);
     }
 
     renderCounters();
     updateDiskFileBadge();
+    updateHeaderDateDisplay();
+}
+
+function updateHeaderDateDisplay() {
+    const dateHeader = document.getElementById('headerCurrentDateText');
+    if (!dateHeader) return;
+    const now = new Date();
+    const dual = formatDualDate(now);
+    const greg = formatDate(now);
+    if (dual) {
+        dateHeader.innerHTML = `
+            <span>${greg.weekday}, ${greg.shortDate}</span>
+            <span style="opacity: 0.6; margin: 0 4px;">•</span>
+            <span style="color: #38BDF8; font-weight: 600;">${dual.shamsiFullPersian}</span>
+        `;
+    } else {
+        dateHeader.textContent = greg.fullDisplay;
+    }
 }
 
 // Updates statistics strip in toolbar
@@ -75,7 +98,7 @@ function updateDiskFileBadge() {
 
     if (isServerConnected()) {
         badge.className = 'disk-sync-badge';
-        text.textContent = '🟢 Disk Sync: Connected';
+        text.textContent = '🟢 AppData Sync: Active';
     } else {
         badge.className = 'disk-sync-badge unlinked';
         text.textContent = '🟠 Browser Mode (localStorage)';
@@ -108,7 +131,6 @@ function initAppEvents() {
     document.getElementById('headerNewMaterialBtn')?.addEventListener('click', () => openFolderModal());
     document.getElementById('headerNewSubjectBtn')?.addEventListener('click', () => openSubjectModal());
     document.getElementById('diskSyncBadge')?.addEventListener('click', openBackupModal);
-    document.getElementById('btnGitSyncHeader')?.addEventListener('click', openGitModal);
     document.getElementById('btnBackupModalHeader')?.addEventListener('click', openBackupModal);
     document.getElementById('btnShortcutsHeader')?.addEventListener('click', () => {
         document.getElementById('shortcutsModal')?.classList.add('is-active');
@@ -164,7 +186,7 @@ function initAppEvents() {
         }
         if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'v') {
             e.preventDefault();
-            const views = ['grid', 'table', 'timeline'];
+            const views = ['grid', 'table', 'timeline', 'kanban'];
             const nextIdx = (views.indexOf(AppState.currentView) + 1) % views.length;
             switchView(views[nextIdx]);
         }
@@ -176,31 +198,20 @@ function initAppEvents() {
             e.target.classList.remove('is-active');
         }
     });
-
-    // Header current date
-    const dateHeader = document.getElementById('headerCurrentDateText');
-    if (dateHeader) {
-        const now = formatDate(new Date());
-        dateHeader.textContent = `Today: ${now.fullDisplay}`;
-    }
 }
 
 // Bootstrap
 window.addEventListener('DOMContentLoaded', async () => {
-    // 1. Initialize modal dialog listeners
     initItemModalEvents();
     initSubjectModalEvents();
     initFolderModalEvents();
-    initGitModalEvents();
     initBackupModalEvents();
     initAppEvents();
 
-    // 2. Subscribe to reactive state updates
     subscribe(() => {
         renderActiveView();
     });
 
-    // 3. Load initial database from local server or localStorage
     const result = await loadData();
     if (result.success && result.data) {
         setAppStateData(result.data);
@@ -208,13 +219,8 @@ window.addEventListener('DOMContentLoaded', async () => {
         renderActiveView();
     }
 
-    // 4. Periodic background clock & countdown update every 60s
     setInterval(() => {
         renderCounters();
-        const dateHeader = document.getElementById('headerCurrentDateText');
-        if (dateHeader) {
-            const now = formatDate(new Date());
-            dateHeader.textContent = `Today: ${now.fullDisplay}`;
-        }
+        updateHeaderDateDisplay();
     }, 60000);
 });

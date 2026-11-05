@@ -4,10 +4,10 @@
 
 import { AppState, SUBJECT_GRADIENTS, getFilteredItems, toggleItemComplete, deleteItem } from '../state.js';
 import { formatDate, calculateRemainingTime, sortItemsChronologically, escapeHtml } from '../dateUtils.js';
+import { formatDualDate } from '../jalali.js';
 import { openItemModal } from '../modals/itemModal.js';
 import { openSubjectModal } from '../modals/subjectModal.js';
 import { openFolderModal } from '../modals/folderModal.js';
-import { openGitModal } from '../modals/gitModal.js';
 import { openFolder } from '../api.js';
 
 export function renderTableView(container) {
@@ -42,15 +42,11 @@ export function renderTableView(container) {
             </span>
         </div>
         <div style="display: flex; gap: 8px;">
-            <button type="button" class="btn btn-sm btn-outline-cyan btn-table-git" title="Sync with GitHub">
-                🚀 Sync to GitHub
-            </button>
             <button type="button" class="btn btn-sm btn-primary btn-table-new-subj">
                 ➕ New Subject
             </button>
         </div>
     `;
-    headerStrip.querySelector('.btn-table-git').addEventListener('click', () => openGitModal());
     headerStrip.querySelector('.btn-table-new-subj').addEventListener('click', () => openSubjectModal());
     container.appendChild(headerStrip);
 
@@ -76,14 +72,14 @@ export function renderTableView(container) {
         if (nextItem) {
             const dueDate = new Date(nextItem.dueDate);
             const remaining = calculateRemainingTime(dueDate);
-            const formatted = formatDate(dueDate);
+            const dual = formatDualDate(dueDate);
             nextItemHtml = `
                 <div style="display: flex; flex-direction: column; gap: 1px;">
-                    <div style="font-weight: 600; color: #F8FAFC; font-size: 0.82rem; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(nextItem.title)}">
+                    <div style="font-weight: 600; color: #F8FAFC; font-size: 0.82rem; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(nextItem.title)}">
                         ${nextItem.kind === 'task' ? '📋' : '📅'} ${escapeHtml(nextItem.title)}
                     </div>
-                    <div style="font-size: 0.72rem; color: ${remaining.isUrgent ? '#F87171' : '#94A3B8'}; display: flex; align-items: center; gap: 4px;">
-                        <span>🗓️ ${formatted.primaryDisplay}</span>
+                    <div style="font-size: 0.72rem; color: ${remaining.isUrgent ? '#F87171' : '#94A3B8'}; display: flex; align-items: center; gap: 6px;">
+                        <span>🗓️ ${dual ? dual.shamsiShort : ''}</span>
                         <span class="compact-urgency-badge ${remaining.urgencyLevel}">(${remaining.friendlyText})</span>
                     </div>
                 </div>
@@ -190,6 +186,7 @@ export function renderTableView(container) {
                 subjFilteredItems.forEach(item => {
                     const dueDate = new Date(item.dueDate);
                     const formatted = formatDate(dueDate);
+                    const dual = formatDualDate(dueDate);
                     const remaining = calculateRemainingTime(dueDate);
                     const isTask = item.kind === 'task';
 
@@ -204,7 +201,7 @@ export function renderTableView(container) {
                             <div class="compact-task-info">
                                 <span class="compact-task-title">${item.typeIcon || (isTask ? '📋' : '📅')} ${escapeHtml(item.title)}</span>
                                 <div class="compact-task-meta">
-                                    <span>🗓️ ${formatted.primaryDisplay}</span>
+                                    <span>🗓️ ${dual ? dual.shamsiShort : formatted.shortDate}</span>
                                     <span>•</span>
                                     <span class="compact-urgency-badge ${remaining.urgencyLevel}">${remaining.friendlyText}</span>
                                 </div>

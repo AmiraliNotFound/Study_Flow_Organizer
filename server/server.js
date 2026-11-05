@@ -1,31 +1,63 @@
 /**
- * Study Flow Organizer - Local API & Static Server
+ * Study Flow Organizer - Local API & Static Server (v4.1)
  * 
  * Provides:
  * 1. Zero-dependency static file server for app/
- * 2. Real two-way disk persistence to data/study_flow_data.json
+ * 2. Standard OS local data persistence (%APPDATA%\StudyFlowOrganizer on Windows)
  * 3. Safe OS integration: Windows File Explorer & native Folder Browser Dialog
- * 4. Dynamic Git status, push, and safe pull
- * 
- * Runs on Node.js standard library (no external npm dependencies needed).
+ * 4. Automatic timestamped backups
  */
 
 const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
-const { spawn, execFile } = require('node:child_process');
+const os = require('node:os');
+const { spawn } = require('node:child_process');
 
 const PORT = process.env.PORT || 3456;
 const ROOT_DIR = path.resolve(__dirname, '..');
 const APP_DIR = path.join(ROOT_DIR, 'app');
-const DATA_DIR = path.join(ROOT_DIR, 'data');
+const TEMPLATE_FILE = path.join(ROOT_DIR, 'data', 'study_flow_data.template.json');
+
+// Standard OS Application Data Directory
+function resolveDataDirectory() {
+    if (process.env.STUDY_FLOW_PORTABLE) {
+        return path.join(ROOT_DIR, 'data');
+    }
+    const baseAppData = process.env.APPDATA || (
+        process.platform === 'darwin'
+            ? path.join(os.homedir(), 'Library', 'Application Support')
+            : path.join(os.homedir(), '.config')
+    );
+    return path.join(baseAppData, 'StudyFlowOrganizer');
+}
+
+const DATA_DIR = resolveDataDirectory();
 const BACKUPS_DIR = path.join(DATA_DIR, 'backups');
 const DATA_FILE = path.join(DATA_DIR, 'study_flow_data.json');
-const TEMPLATE_FILE = path.join(DATA_DIR, 'study_flow_data.template.json');
 
-// Ensure backups folder exists
+// Ensure standard data and backups directories exist
+if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+}
 if (!fs.existsSync(BACKUPS_DIR)) {
     fs.mkdirSync(BACKUPS_DIR, { recursive: true });
+}
+
+// Seed data if AppData file does not exist yet
+if (!fs.existsSync(DATA_FILE)) {
+    const localRepoData = path.join(ROOT_DIR, 'data', 'study_flow_data.json');
+    if (fs.existsSync(localRepoData)) {
+        try {
+            fs.copyFileSync(localRepoData, DATA_FILE);
+            console.log(`[Seed] Initialized AppData storage from repository data file.`);
+        } catch (e) {}
+    } else if (fs.existsSync(TEMPLATE_FILE)) {
+        try {
+            fs.copyFileSync(TEMPLATE_FILE, DATA_FILE);
+            console.log(`[Seed] Initialized AppData storage from template.`);
+        } catch (e) {}
+    }
 }
 
 // MIME types for static assets
@@ -46,7 +78,6 @@ const MIME_TYPES = {
     '.ttf': 'font/ttf'
 };
 
-// Execute command helper returning a Promise
 function runCmd(cmd, args, options = {}) {
     return new Promise((resolve) => {
         const proc = spawn(cmd, args, {
@@ -81,13 +112,12 @@ function runCmd(cmd, args, options = {}) {
     });
 }
 
-// Read raw request body as JSON
 function parseJsonBody(req) {
     return new Promise((resolve, reject) => {
         let body = '';
         req.on('data', chunk => {
             body += chunk;
-            if (body.length > 10 * 1024 * 1024) { // 10MB limit
+            if (body.length > 10 * 1024 * 1024) {
                 req.destroy();
                 reject(new Error('Request payload too large'));
             }
@@ -104,7 +134,6 @@ function parseJsonBody(req) {
     });
 }
 
-// Send standard JSON response
 function sendJson(res, statusCode, data) {
     const json = JSON.stringify(data);
     res.writeHead(statusCode, {
@@ -117,7 +146,6 @@ function sendJson(res, statusCode, data) {
     res.end(json);
 }
 
-// Create timestamped backup of current data file
 function createBackupSnapshot() {
     if (!fs.existsSync(DATA_FILE)) return null;
     try {
@@ -131,7 +159,6 @@ function createBackupSnapshot() {
     }
 }
 
-// Load database from file with fallback
 function loadDatabase() {
     if (fs.existsSync(DATA_FILE)) {
         try {
@@ -150,7 +177,7 @@ function loadDatabase() {
     return {
         $schema: "StudyFlowOrganizer_v4",
         metadata: {
-            version: "4.0.0",
+            version: "4.1.0",
             appName: "Study Flow Organizer",
             lastSaved: new Date().toISOString(),
             language: "en"
@@ -184,7 +211,6 @@ function loadDatabase() {
 
 // Request Handler
 async function handleRequest(req, res) {
-    // CORS pre-flight
     if (req.method === 'OPTIONS') {
         res.writeHead(204, {
             'Access-Control-Allow-Origin': '*',
@@ -199,27 +225,29 @@ async function handleRequest(req, res) {
 
     // --- API ROUTES ---
 
-    // 1. Health check
+    // 1. Health check with standard data directory reporting
     if (pathname === '/api/health' && req.method === 'GET') {
         return sendJson(res, 200, {
             status: 'ok',
-            version: '4.0.0',
+            version: '4.1.0',
             serverTime: new Date().toISOString(),
-            platform: process.platform
+            platform: process.platform,
+            dataDirectory: DATA_DIR,
+            dataFile: DATA_FILE
         });
     }
 
-    // 2. GET /api/data: Load active data
+    // 2. GET /api/data: Load active data from standard AppData
     if (pathname === '/api/data' && req.method === 'GET') {
         try {
             const data = loadDatabase();
-            return sendJson(res, 200, { success: true, data });
+            return sendJson(res, 200, { success: true, data, dataDirectory: DATA_DIR });
         } catch (err) {
             return sendJson(res, 500, { success: false, error: err.message });
         }
     }
 
-    // 3. POST /api/data: Save active data to disk with automatic safety backup
+    // 3. POST /api/data: Save active data with automatic backup snapshot
     if (pathname === '/api/data' && req.method === 'POST') {
         try {
             const payload = await parseJsonBody(req);
@@ -227,24 +255,22 @@ async function handleRequest(req, res) {
                 return sendJson(res, 400, { success: false, error: 'Malformed data payload' });
             }
 
-            // Create timestamped backup before writing
             const backupFile = createBackupSnapshot();
 
-            // Format metadata
             if (!payload.metadata) payload.metadata = {};
             payload.metadata.lastSaved = new Date().toISOString();
-            payload.metadata.version = "4.0.0";
+            payload.metadata.version = "4.1.0";
             payload.$schema = "StudyFlowOrganizer_v4";
 
-            // Write atomically via temporary file
             const tempFile = `${DATA_FILE}.tmp`;
             fs.writeFileSync(tempFile, JSON.stringify(payload, null, 2), 'utf-8');
             fs.renameSync(tempFile, DATA_FILE);
 
             return sendJson(res, 200, {
                 success: true,
-                message: 'Data saved successfully to disk',
+                message: 'Data saved successfully to standard AppData directory',
                 lastSaved: payload.metadata.lastSaved,
+                dataDirectory: DATA_DIR,
                 backupFile: backupFile ? path.basename(backupFile) : null
             });
         } catch (err) {
@@ -265,9 +291,7 @@ async function handleRequest(req, res) {
                 return sendJson(res, 404, { success: false, error: `Path does not exist on disk: ${cleanPath}` });
             }
 
-            // Safely open in Windows Explorer or default platform tool
             if (process.platform === 'win32') {
-                // explorer.exe takes folder path directly; no custom protocol required
                 spawn('explorer.exe', [cleanPath], { detached: true, stdio: 'ignore' }).unref();
             } else if (process.platform === 'darwin') {
                 spawn('open', [cleanPath], { detached: true, stdio: 'ignore' }).unref();
@@ -281,14 +305,29 @@ async function handleRequest(req, res) {
         }
     }
 
-    // 5. POST /api/pick-folder: Native Folder Browser dialog executed on server
+    // 5. POST /api/open-data-dir: Open standard AppData storage directory in Windows Explorer
+    if (pathname === '/api/open-data-dir' && req.method === 'POST') {
+        try {
+            if (process.platform === 'win32') {
+                spawn('explorer.exe', [DATA_DIR], { detached: true, stdio: 'ignore' }).unref();
+            } else if (process.platform === 'darwin') {
+                spawn('open', [DATA_DIR], { detached: true, stdio: 'ignore' }).unref();
+            } else {
+                spawn('xdg-open', [DATA_DIR], { detached: true, stdio: 'ignore' }).unref();
+            }
+            return sendJson(res, 200, { success: true, path: DATA_DIR });
+        } catch (err) {
+            return sendJson(res, 500, { success: false, error: err.message });
+        }
+    }
+
+    // 6. POST /api/pick-folder: Native Folder Browser dialog executed on server
     if (pathname === '/api/pick-folder' && req.method === 'POST') {
         try {
             if (process.platform !== 'win32') {
                 return sendJson(res, 501, { success: false, error: 'Native folder dialog currently supported on Windows' });
             }
 
-            // Run lightweight PowerShell dialog with TopMost window
             const psScript = `
 Add-Type -AssemblyName System.Windows.Forms
 $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
@@ -319,91 +358,12 @@ if ($dialog.ShowDialog($topForm) -eq [System.Windows.Forms.DialogResult]::OK) {
         }
     }
 
-    // 6. GET /api/git/status: Live dynamic Git status
-    if (pathname === '/api/git/status' && req.method === 'GET') {
-        try {
-            const branchRes = await runCmd('git', ['branch', '--show-current']);
-            const remoteRes = await runCmd('git', ['remote', 'get-url', 'origin']);
-            const statusRes = await runCmd('git', ['status', '--porcelain']);
-
-            const branch = branchRes.stdout || 'main';
-            const remote = remoteRes.stdout || 'Not configured';
-            const rawChanges = statusRes.stdout ? statusRes.stdout.split('\n').filter(Boolean) : [];
-
-            // Read counts from current study_flow_data.json
-            const db = loadDatabase();
-            const counts = {
-                subjects: (db.subjects || []).length,
-                items: (db.items || []).length,
-                materials: (db.materials || []).length
-            };
-
-            return sendJson(res, 200, {
-                success: true,
-                branch,
-                remote,
-                modifiedFiles: rawChanges,
-                isClean: rawChanges.length === 0,
-                counts
-            });
-        } catch (err) {
-            return sendJson(res, 500, { success: false, error: err.message });
-        }
-    }
-
-    // 7. POST /api/git/push: Stage, commit, and push
-    if (pathname === '/api/git/push' && req.method === 'POST') {
-        try {
-            const { message } = await parseJsonBody(req);
-            const commitMsg = (message && message.trim()) || `Update study flow schedule (${new Date().toLocaleString()})`;
-
-            await runCmd('git', ['add', '-A']);
-            const commitRes = await runCmd('git', ['commit', '-m', commitMsg]);
-            
-            const branchRes = await runCmd('git', ['branch', '--show-current']);
-            const currentBranch = branchRes.stdout || 'main';
-
-            const pushRes = await runCmd('git', ['push', 'origin', currentBranch]);
-
-            return sendJson(res, 200, {
-                success: pushRes.success,
-                commit: commitRes.stdout || commitRes.stderr,
-                pushOutput: pushRes.stdout || pushRes.stderr,
-                branch: currentBranch
-            });
-        } catch (err) {
-            return sendJson(res, 500, { success: false, error: err.message });
-        }
-    }
-
-    // 8. POST /api/git/pull: Safe pull with local data snapshot
-    if (pathname === '/api/git/pull' && req.method === 'POST') {
-        try {
-            // Backup before pull
-            const backupFile = createBackupSnapshot();
-
-            const branchRes = await runCmd('git', ['branch', '--show-current']);
-            const currentBranch = branchRes.stdout || 'main';
-
-            const pullRes = await runCmd('git', ['pull', 'origin', currentBranch]);
-
-            return sendJson(res, 200, {
-                success: pullRes.success,
-                output: pullRes.stdout || pullRes.stderr,
-                backupFile: backupFile ? path.basename(backupFile) : null
-            });
-        } catch (err) {
-            return sendJson(res, 500, { success: false, error: err.message });
-        }
-    }
-
     // --- STATIC ASSET SERVING ---
     let safePath = path.normalize(pathname).replace(/^(\.\.[\/\\])+/, '');
     if (safePath === '/' || safePath === '\\') safePath = '/index.html';
 
     const filePath = path.join(APP_DIR, safePath);
 
-    // Security check: stay inside APP_DIR
     if (!filePath.startsWith(APP_DIR)) {
         res.writeHead(403, { 'Content-Type': 'text/plain' });
         return res.end('Access Denied');
@@ -432,14 +392,13 @@ if ($dialog.ShowDialog($topForm) -eq [System.Windows.Forms.DialogResult]::OK) {
     });
 }
 
-// Start Server
 const server = http.createServer(handleRequest);
 
 server.listen(PORT, '127.0.0.1', () => {
     console.log(`==================================================================`);
-    console.log(`  🎓 Study Flow Organizer v4.0`);
+    console.log(`  🎓 Study Flow Organizer v4.1`);
     console.log(`  🟢 Server running at: http://127.0.0.1:${PORT}`);
-    console.log(`  📁 Active database : ${DATA_FILE}`);
+    console.log(`  📂 Standard AppData : ${DATA_DIR}`);
     console.log(`==================================================================`);
 });
 

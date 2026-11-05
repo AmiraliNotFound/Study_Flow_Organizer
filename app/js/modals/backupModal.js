@@ -1,24 +1,33 @@
 /**
- * Backup, Export & Import Modal Controller
+ * Backup, Export, Import & Standard Data Location Controller
  */
 
 import { AppState, setAppStateData, persistCurrentState } from '../state.js';
 import { isServerConnected } from '../api.js';
 
-export function openBackupModal() {
+export async function openBackupModal() {
     const modal = document.getElementById('backupModal');
     if (!modal) return;
 
     const isConnected = isServerConnected();
     const statusDot = document.getElementById('modalDiskSyncDot');
     const statusText = document.getElementById('modalDiskSyncText');
+    const dataDirText = document.getElementById('modalDataDirText');
 
     if (isConnected) {
         if (statusDot) statusDot.style.background = '#10B981';
-        if (statusText) statusText.textContent = '🟢 Connected to data/study_flow_data.json on disk';
+        if (statusText) statusText.textContent = '🟢 Connected to standard AppData directory on disk';
+        try {
+            const res = await fetch('/api/health');
+            const data = await res.json();
+            if (dataDirText && data.dataDirectory) {
+                dataDirText.textContent = data.dataDirectory;
+            }
+        } catch (e) {}
     } else {
         if (statusDot) statusDot.style.background = '#F59E0B';
         if (statusText) statusText.textContent = '🟠 Standalone Browser Mode (localStorage)';
+        if (dataDirText) dataDirText.textContent = 'Browser Internal LocalStorage';
     }
 
     modal.classList.add('is-active');
@@ -33,7 +42,7 @@ export function exportDataToJson() {
     const payload = {
         $schema: "StudyFlowOrganizer_v4",
         metadata: {
-            version: "4.0.0",
+            version: "4.1.0",
             appName: "Study Flow Organizer",
             exportedAt: new Date().toISOString(),
             language: "en"
@@ -60,6 +69,15 @@ export function initBackupModalEvents() {
     document.getElementById('btnCloseBackupModal')?.addEventListener('click', closeBackupModal);
 
     document.getElementById('btnExportJson')?.addEventListener('click', exportDataToJson);
+
+    // Open Standard AppData in Windows Explorer
+    document.getElementById('btnOpenDataFolder')?.addEventListener('click', async () => {
+        try {
+            await fetch('/api/open-data-dir', { method: 'POST' });
+        } catch (e) {
+            alert('Could not open AppData folder: ' + e.message);
+        }
+    });
 
     // Import JSON
     const fileInput = document.getElementById('importJsonFileInput');
