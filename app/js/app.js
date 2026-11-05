@@ -16,7 +16,7 @@ import { renderKanbanView } from './views/kanbanView.js';
 import { openItemModal, initItemModalEvents } from './modals/itemModal.js';
 import { openSubjectModal, initSubjectModalEvents } from './modals/subjectModal.js';
 import { openFolderModal, initFolderModalEvents } from './modals/folderModal.js';
-import { openBackupModal, initBackupModalEvents } from './modals/backupModal.js';
+import { openBackupModal, closeBackupModal, initBackupModalEvents } from './modals/backupModal.js';
 
 // Renders the currently selected view
 export function renderActiveView() {
@@ -282,19 +282,17 @@ function initAppEvents() {
 
 // Bootstrap
 window.addEventListener('DOMContentLoaded', async () => {
-    initTheme();
-    initItemModalEvents();
-    initSubjectModalEvents();
-    initFolderModalEvents();
-    initBackupModalEvents();
-    initAppEvents();
+    try { initTheme(); } catch (e) { console.error('[App] initTheme error:', e); }
+    try { renderActiveView(); } catch (e) { console.error('[App] renderActiveView error:', e); }
+    try { initItemModalEvents(); } catch (e) { console.error('[App] initItemModalEvents error:', e); }
+    try { initSubjectModalEvents(); } catch (e) { console.error('[App] initSubjectModalEvents error:', e); }
+    try { initFolderModalEvents(); } catch (e) { console.error('[App] initFolderModalEvents error:', e); }
+    try { initBackupModalEvents(); } catch (e) { console.error('[App] initBackupModalEvents error:', e); }
+    try { initAppEvents(); } catch (e) { console.error('[App] initAppEvents error:', e); }
 
     subscribe(() => {
         renderActiveView();
     });
-
-    // Render immediately so headers, date, and views display instantly
-    renderActiveView();
 
     try {
         const result = await loadData();

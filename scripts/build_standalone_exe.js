@@ -32,8 +32,24 @@ if (fs.existsSync(OUTPUT_EXE)) {
 
     if (currentSubsystem === 3) {
         buf.writeUInt16LE(2, subsystemOffset); // 2 = IMAGE_SUBSYSTEM_WINDOWS_GUI
-        fs.writeFileSync(OUTPUT_EXE, buf);
-        console.log(`    Successfully patched Subsystem from 3 (Console) to 2 (Windows GUI).`);
+        
+        let written = false;
+        for (let i = 0; i < 5; i++) {
+            try {
+                fs.writeFileSync(OUTPUT_EXE, buf);
+                written = true;
+                break;
+            } catch (err) {
+                if (err.code === 'EBUSY' && i < 4) {
+                    execSync('powershell -Command "Start-Sleep -Milliseconds 800"');
+                } else {
+                    throw err;
+                }
+            }
+        }
+        if (written) {
+            console.log(`    Successfully patched Subsystem from 3 (Console) to 2 (Windows GUI).`);
+        }
     } else {
         console.log(`    Subsystem is already ${currentSubsystem}.`);
     }
