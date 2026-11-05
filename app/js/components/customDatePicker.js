@@ -1,294 +1,240 @@
 /**
- * Custom Dual Date Selector & Indicator Component (Gregorian + Real Shamsi/Jalali)
+ * Full Month Calendar Grid Viewer with Dual Day Numbering
+ * Features:
+ * 1. Interactive Month Navigation (‹ Prev / Next ›)
+ * 2. Dual Day Numbering in each grid cell (Gregorian prominent + Shamsi secondary)
+ * 3. 100% English Latin text and digits (no Persian/Arabic script)
+ * 4. Zero <select> tags - pure custom designed interactive UI
  */
 
-import { gregorianToJalali, jalaliToGregorian, formatDualDate, JALALI_MONTH_NAMES, toPersianDigits, isJalaliLeapYear } from '../jalali.js';
-import { MONTH_NAMES, calculateRemainingTime, formatDate } from '../dateUtils.js';
+import { gregorianToJalali, jalaliToGregorian, formatDualDate, JALALI_MONTH_NAMES_EN, GREGORIAN_MONTH_NAMES_EN } from '../jalali.js';
 
-let currentDate = new Date();
+export class CustomDatePicker {
+    constructor({ container, initialDate = new Date(), onChange = null }) {
+        this.container = typeof container === 'string' ? document.getElementById(container) : container;
+        this.selectedDate = initialDate instanceof Date && !isNaN(initialDate) ? new Date(initialDate) : new Date();
+        this.viewedYear = this.selectedDate.getFullYear();
+        this.viewedMonth = this.selectedDate.getMonth(); // 0 - 11
+        this.onChange = onChange;
 
-export function getSelectedDate() {
-    return new Date(currentDate.getTime());
-}
-
-export function setSelectedDate(dateInput) {
-    currentDate = dateInput instanceof Date ? new Date(dateInput.getTime()) : new Date(dateInput);
-    if (isNaN(currentDate.getTime())) currentDate = new Date();
-    updateSelectorsFromDate();
-}
-
-/**
- * Initializes the dual date picker inside the modal.
- */
-export function initCustomDatePicker(container, onDateChanged) {
-    if (!container) return;
-
-    container.innerHTML = `
-        <div class="custom-dual-picker">
-            <!-- Mode Switch Tabs -->
-            <div class="dual-picker-tabs">
-                <button type="button" class="dual-tab-btn active" id="tabPickShamsi">
-                    <span>🗓️ تقویم شمسی (Jalali)</span>
-                </button>
-                <button type="button" class="dual-tab-btn" id="tabPickGregorian">
-                    <span>📅 Gregorian Calendar</span>
-                </button>
-            </div>
-
-            <!-- Shamsi Selector View -->
-            <div id="shamsiSelectorsWrap" class="selectors-row">
-                <div class="custom-field">
-                    <label class="custom-field-lbl">سال (Year):</label>
-                    <select id="selShamsiYear" class="form-select"></select>
-                </div>
-                <div class="custom-field" style="flex: 1.5;">
-                    <label class="custom-field-lbl">ماه (Month):</label>
-                    <select id="selShamsiMonth" class="form-select"></select>
-                </div>
-                <div class="custom-field">
-                    <label class="custom-field-lbl">روز (Day):</label>
-                    <select id="selShamsiDay" class="form-select"></select>
-                </div>
-            </div>
-
-            <!-- Gregorian Selector View -->
-            <div id="gregorianSelectorsWrap" class="selectors-row hidden">
-                <div class="custom-field">
-                    <label class="custom-field-lbl">Year:</label>
-                    <select id="selGregYear" class="form-select"></select>
-                </div>
-                <div class="custom-field" style="flex: 1.5;">
-                    <label class="custom-field-lbl">Month:</label>
-                    <select id="selGregMonth" class="form-select"></select>
-                </div>
-                <div class="custom-field">
-                    <label class="custom-field-lbl">Day:</label>
-                    <select id="selGregDay" class="form-select"></select>
-                </div>
-            </div>
-
-            <!-- Live Dual Date Status Indicator -->
-            <div class="dual-live-indicator">
-                <div class="dual-indicator-line shamsi-line">
-                    <span class="indicator-tag">شمسی:</span>
-                    <strong id="liveShamsiText">-</strong>
-                </div>
-                <div class="dual-indicator-line greg-line">
-                    <span class="indicator-tag">Gregorian:</span>
-                    <strong id="liveGregText">-</strong>
-                </div>
-                <div id="liveCountdownText" class="countdown-line">Calculating deadline...</div>
-            </div>
-        </div>
-    `;
-
-    // Populate Year and Month dropdowns
-    populateShamsiYears();
-    populateShamsiMonths();
-    populateGregorianYears();
-    populateGregorianMonths();
-
-    // Setup mode tabs
-    const tabShamsi = container.querySelector('#tabPickShamsi');
-    const tabGreg = container.querySelector('#tabPickGregorian');
-    const wrapShamsi = container.querySelector('#shamsiSelectorsWrap');
-    const wrapGreg = container.querySelector('#gregorianSelectorsWrap');
-
-    tabShamsi.addEventListener('click', () => {
-        tabShamsi.classList.add('active');
-        tabGreg.classList.remove('active');
-        wrapShamsi.classList.remove('hidden');
-        wrapGreg.classList.add('hidden');
-    });
-
-    tabGreg.addEventListener('click', () => {
-        tabGreg.classList.add('active');
-        tabShamsi.classList.remove('active');
-        wrapGreg.classList.remove('hidden');
-        wrapShamsi.classList.add('hidden');
-    });
-
-    // Event listeners on Shamsi inputs
-    const sYear = container.querySelector('#selShamsiYear');
-    const sMonth = container.querySelector('#selShamsiMonth');
-    const sDay = container.querySelector('#selShamsiDay');
-
-    const onShamsiChanged = () => {
-        const jy = parseInt(sYear.value, 10);
-        const jm = parseInt(sMonth.value, 10);
-        updateShamsiDaysDropdown(jy, jm);
-        const jd = parseInt(sDay.value, 10) || 1;
-
-        const { gy, gm, gd } = jalaliToGregorian(jy, jm, jd);
-        currentDate.setFullYear(gy, gm - 1, gd);
-        updateLiveIndicator();
-        updateGregorianDropdowns(gy, gm, gd);
-        if (typeof onDateChanged === 'function') onDateChanged(currentDate);
-    };
-
-    sYear.addEventListener('change', onShamsiChanged);
-    sMonth.addEventListener('change', onShamsiChanged);
-    sDay.addEventListener('change', onShamsiChanged);
-
-    // Event listeners on Gregorian inputs
-    const gYear = container.querySelector('#selGregYear');
-    const gMonth = container.querySelector('#selGregMonth');
-    const gDay = container.querySelector('#selGregDay');
-
-    const onGregChanged = () => {
-        const gy = parseInt(gYear.value, 10);
-        const gm = parseInt(gMonth.value, 10);
-        updateGregorianDaysDropdown(gy, gm);
-        const gd = parseInt(gDay.value, 10) || 1;
-
-        currentDate.setFullYear(gy, gm - 1, gd);
-        updateLiveIndicator();
-        const { jy, jm, jd } = gregorianToJalali(gy, gm, gd);
-        updateShamsiDropdowns(jy, jm, jd);
-        if (typeof onDateChanged === 'function') onDateChanged(currentDate);
-    };
-
-    gYear.addEventListener('change', onGregChanged);
-    gMonth.addEventListener('change', onGregChanged);
-    gDay.addEventListener('change', onGregChanged);
-
-    updateSelectorsFromDate();
-}
-
-function populateShamsiYears() {
-    const sel = document.getElementById('selShamsiYear');
-    if (!sel) return;
-    sel.innerHTML = '';
-    const nowJ = gregorianToJalali(new Date().getFullYear(), new Date().getMonth() + 1, new Date().getDate());
-    for (let y = nowJ.jy - 1; y <= nowJ.jy + 5; y++) {
-        const opt = document.createElement('option');
-        opt.value = y;
-        opt.textContent = `${y} (${toPersianDigits(y)})`;
-        sel.appendChild(opt);
+        this.render();
     }
-}
 
-function populateShamsiMonths() {
-    const sel = document.getElementById('selShamsiMonth');
-    if (!sel) return;
-    sel.innerHTML = '';
-    JALALI_MONTH_NAMES.forEach((m, idx) => {
-        const opt = document.createElement('option');
-        opt.value = idx + 1;
-        opt.textContent = `${idx + 1}. ${m.nameFa} (${m.nameEn})`;
-        sel.appendChild(opt);
-    });
-}
+    render() {
+        if (!this.container) return;
+        this.container.innerHTML = '';
 
-function populateGregorianYears() {
-    const sel = document.getElementById('selGregYear');
-    if (!sel) return;
-    sel.innerHTML = '';
-    const gy = new Date().getFullYear();
-    for (let y = gy - 1; y <= gy + 5; y++) {
-        const opt = document.createElement('option');
-        opt.value = y;
-        opt.textContent = String(y);
-        sel.appendChild(opt);
+        const wrapper = document.createElement('div');
+        wrapper.className = 'month-calendar-wrapper';
+
+        // 1. Calendar Header (Navigation & Dual Month Display)
+        const header = document.createElement('div');
+        header.className = 'month-calendar-header';
+
+        const btnPrev = document.createElement('button');
+        btnPrev.type = 'button';
+        btnPrev.className = 'cal-nav-btn';
+        btnPrev.innerHTML = '&#8249;';
+        btnPrev.title = 'Previous Month';
+        btnPrev.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.navigateMonth(-1);
+        });
+
+        const titleBox = document.createElement('div');
+        titleBox.className = 'cal-title-box';
+
+        const primaryTitle = document.createElement('div');
+        primaryTitle.className = 'cal-primary-title';
+        primaryTitle.textContent = `${GREGORIAN_MONTH_NAMES_EN[this.viewedMonth]} ${this.viewedYear}`;
+
+        // Compute Jalali equivalent for the viewed month
+        const midMonthDate = new Date(this.viewedYear, this.viewedMonth, 15);
+        const { jy, jm } = gregorianToJalali(this.viewedYear, this.viewedMonth + 1, 15);
+        const jmObj = JALALI_MONTH_NAMES_EN[jm - 1] || JALALI_MONTH_NAMES_EN[0];
+
+        const secondaryTitle = document.createElement('div');
+        secondaryTitle.className = 'cal-secondary-title';
+        secondaryTitle.textContent = `${jmObj.nameEn} ${jy}`;
+
+        titleBox.appendChild(primaryTitle);
+        titleBox.appendChild(secondaryTitle);
+
+        const btnNext = document.createElement('button');
+        btnNext.type = 'button';
+        btnNext.className = 'cal-nav-btn';
+        btnNext.innerHTML = '&#8250;';
+        btnNext.title = 'Next Month';
+        btnNext.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.navigateMonth(1);
+        });
+
+        header.appendChild(btnPrev);
+        header.appendChild(titleBox);
+        header.appendChild(btnNext);
+        wrapper.appendChild(header);
+
+        // 2. Weekday Header Row (Saturday to Friday)
+        const weekdaysRow = document.createElement('div');
+        weekdaysRow.className = 'cal-weekdays-row';
+        const weekdays = [
+            { label: 'Sat', isWeekend: false },
+            { label: 'Sun', isWeekend: false },
+            { label: 'Mon', isWeekend: false },
+            { label: 'Tue', isWeekend: false },
+            { label: 'Wed', isWeekend: false },
+            { label: 'Thu', isWeekend: false },
+            { label: 'Fri', isWeekend: true }
+        ];
+
+        weekdays.forEach(w => {
+            const cell = document.createElement('div');
+            cell.className = `cal-weekday-cell ${w.isWeekend ? 'is-weekend' : ''}`;
+            cell.textContent = w.label;
+            weekdaysRow.appendChild(cell);
+        });
+        wrapper.appendChild(weekdaysRow);
+
+        // 3. Days Grid
+        const grid = document.createElement('div');
+        grid.className = 'cal-days-grid';
+
+        const firstDayOfMonth = new Date(this.viewedYear, this.viewedMonth, 1);
+        const daysInMonth = new Date(this.viewedYear, this.viewedMonth + 1, 0).getDate();
+
+        // Convert Sunday-indexed getDay() (0=Sun, 1=Mon, ..., 6=Sat) to Saturday-indexed (0=Sat, 1=Sun, ..., 6=Fri)
+        const firstDayDayOfWeek = (firstDayOfMonth.getDay() + 1) % 7;
+
+        // Days from previous month
+        const daysInPrevMonth = new Date(this.viewedYear, this.viewedMonth, 0).getDate();
+        for (let i = firstDayDayOfWeek - 1; i >= 0; i--) {
+            const dayNum = daysInPrevMonth - i;
+            const prevDate = new Date(this.viewedYear, this.viewedMonth - 1, dayNum);
+            const cell = this.createDayCell(prevDate, true);
+            grid.appendChild(cell);
+        }
+
+        // Days in current month
+        for (let dayNum = 1; dayNum <= daysInMonth; dayNum++) {
+            const curDate = new Date(this.viewedYear, this.viewedMonth, dayNum);
+            const cell = this.createDayCell(curDate, false);
+            grid.appendChild(cell);
+        }
+
+        // Days from next month to fill complete grid rows (multiples of 7)
+        const totalCells = firstDayDayOfWeek + daysInMonth;
+        const remainingCells = (7 - (totalCells % 7)) % 7;
+        for (let dayNum = 1; dayNum <= remainingCells; dayNum++) {
+            const nextDate = new Date(this.viewedYear, this.viewedMonth + 1, dayNum);
+            const cell = this.createDayCell(nextDate, true);
+            grid.appendChild(cell);
+        }
+
+        wrapper.appendChild(grid);
+
+        // 4. Selected Date Summary Footer
+        const footer = document.createElement('div');
+        footer.className = 'cal-footer-banner';
+        const dual = formatDualDate(this.selectedDate);
+        if (dual) {
+            footer.innerHTML = `
+                <div class="cal-footer-icon">📅</div>
+                <div class="cal-footer-text">
+                    <strong>${dual.gregFull}</strong>
+                    <span> • ${dual.shamsiFull}</span>
+                </div>
+            `;
+        }
+        wrapper.appendChild(footer);
+
+        this.container.appendChild(wrapper);
     }
-}
 
-function populateGregorianMonths() {
-    const sel = document.getElementById('selGregMonth');
-    if (!sel) return;
-    sel.innerHTML = '';
-    MONTH_NAMES.forEach((name, idx) => {
-        const opt = document.createElement('option');
-        opt.value = idx + 1;
-        opt.textContent = `${idx + 1}. ${name}`;
-        sel.appendChild(opt);
-    });
-}
+    createDayCell(dateObj, isOtherMonth) {
+        const cell = document.createElement('div');
+        cell.className = 'cal-day-cell';
+        if (isOtherMonth) cell.classList.add('is-other-month');
 
-function updateShamsiDaysDropdown(jy, jm, selectedDay = 1) {
-    const daySel = document.getElementById('selShamsiDay');
-    if (!daySel) return;
-    let maxDays = 31;
-    if (jm >= 7 && jm <= 11) maxDays = 30;
-    if (jm === 12) maxDays = isJalaliLeapYear(jy) ? 30 : 29;
+        const gy = dateObj.getFullYear();
+        const gm = dateObj.getMonth() + 1;
+        const gd = dateObj.getDate();
 
-    const prevVal = parseInt(daySel.value, 10) || selectedDay;
-    daySel.innerHTML = '';
-    for (let d = 1; d <= maxDays; d++) {
-        const opt = document.createElement('option');
-        opt.value = d;
-        opt.textContent = `${d} (${toPersianDigits(d)})`;
-        daySel.appendChild(opt);
+        // Dual Shamsi conversion
+        const { jd } = gregorianToJalali(gy, gm, gd);
+
+        // Check if today
+        const now = new Date();
+        const isToday = now.getFullYear() === gy && now.getMonth() === dateObj.getMonth() && now.getDate() === gd;
+        if (isToday) cell.classList.add('is-today');
+
+        // Check if selected
+        const isSelected = this.selectedDate.getFullYear() === gy &&
+                           this.selectedDate.getMonth() === dateObj.getMonth() &&
+                           this.selectedDate.getDate() === gd;
+        if (isSelected) cell.classList.add('is-selected');
+
+        // Primary: Gregorian Day Number
+        const gregNum = document.createElement('span');
+        gregNum.className = 'cal-num-greg';
+        gregNum.textContent = gd;
+
+        // Secondary: Shamsi Day Number (in English Latin digits)
+        const shamsiNum = document.createElement('span');
+        shamsiNum.className = 'cal-num-shamsi';
+        shamsiNum.textContent = jd;
+
+        cell.appendChild(gregNum);
+        cell.appendChild(shamsiNum);
+
+        cell.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.selectDate(dateObj);
+        });
+
+        return cell;
     }
-    daySel.value = Math.min(prevVal, maxDays);
-}
 
-function updateGregorianDaysDropdown(gy, gm, selectedDay = 1) {
-    const daySel = document.getElementById('selGregDay');
-    if (!daySel) return;
-    const maxDays = new Date(gy, gm, 0).getDate();
-    const prevVal = parseInt(daySel.value, 10) || selectedDay;
-    daySel.innerHTML = '';
-    for (let d = 1; d <= maxDays; d++) {
-        const opt = document.createElement('option');
-        opt.value = d;
-        opt.textContent = String(d);
-        daySel.appendChild(opt);
+    navigateMonth(delta) {
+        this.viewedMonth += delta;
+        if (this.viewedMonth < 0) {
+            this.viewedMonth = 11;
+            this.viewedYear -= 1;
+        } else if (this.viewedMonth > 11) {
+            this.viewedMonth = 0;
+            this.viewedYear += 1;
+        }
+        this.render();
     }
-    daySel.value = Math.min(prevVal, maxDays);
-}
 
-function updateShamsiDropdowns(jy, jm, jd) {
-    const sYear = document.getElementById('selShamsiYear');
-    const sMonth = document.getElementById('selShamsiMonth');
-    const sDay = document.getElementById('selShamsiDay');
-    if (sYear) sYear.value = jy;
-    if (sMonth) sMonth.value = jm;
-    updateShamsiDaysDropdown(jy, jm, jd);
-    if (sDay) sDay.value = jd;
-}
+    selectDate(dateObj) {
+        // Preserve current time hours/minutes
+        const hours = this.selectedDate ? this.selectedDate.getHours() : 23;
+        const minutes = this.selectedDate ? this.selectedDate.getMinutes() : 59;
 
-function updateGregorianDropdowns(gy, gm, gd) {
-    const gYear = document.getElementById('selGregYear');
-    const gMonth = document.getElementById('selGregMonth');
-    const gDay = document.getElementById('selGregDay');
-    if (gYear) gYear.value = gy;
-    if (gMonth) gMonth.value = gm;
-    updateGregorianDaysDropdown(gy, gm, gd);
-    if (gDay) gDay.value = gd;
-}
+        this.selectedDate = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate(), hours, minutes, 0);
+        this.viewedYear = this.selectedDate.getFullYear();
+        this.viewedMonth = this.selectedDate.getMonth();
 
-export function updateSelectorsFromDate() {
-    const gy = currentDate.getFullYear();
-    const gm = currentDate.getMonth() + 1;
-    const gd = currentDate.getDate();
+        this.render();
 
-    const { jy, jm, jd } = gregorianToJalali(gy, gm, gd);
-
-    updateShamsiDropdowns(jy, jm, jd);
-    updateGregorianDropdowns(gy, gm, gd);
-    updateLiveIndicator();
-}
-
-function updateLiveIndicator() {
-    const liveShamsi = document.getElementById('liveShamsiText');
-    const liveGreg = document.getElementById('liveGregText');
-    const liveCountdown = document.getElementById('liveCountdownText');
-
-    const dual = formatDualDate(currentDate);
-    const gregFmt = formatDate(currentDate);
-    const remaining = calculateRemainingTime(currentDate);
-
-    if (liveShamsi && dual) {
-        liveShamsi.textContent = dual.shamsiFullPersian;
+        if (typeof this.onChange === 'function') {
+            this.onChange(this.selectedDate);
+        }
     }
-    if (liveGreg) {
-        liveGreg.textContent = gregFmt.fullDisplay;
+
+    setDate(newDate, triggerChange = true) {
+        if (!newDate) return;
+        this.selectedDate = new Date(newDate);
+        this.viewedYear = this.selectedDate.getFullYear();
+        this.viewedMonth = this.selectedDate.getMonth();
+        this.render();
+        if (triggerChange && typeof this.onChange === 'function') {
+            this.onChange(this.selectedDate);
+        }
     }
-    if (liveCountdown) {
-        liveCountdown.textContent = remaining.isUrgent
-            ? `🚨 ${remaining.friendlyText}`
-            : `⏳ ${remaining.friendlyText}`;
-        liveCountdown.className = `countdown-line ${remaining.urgencyLevel}`;
+
+    getDate() {
+        return this.selectedDate;
     }
 }

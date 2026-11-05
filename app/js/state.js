@@ -5,12 +5,12 @@
 import { saveData } from './api.js';
 
 export const SUBJECT_GRADIENTS = [
-    { name: "Ocean Deep", css: "linear-gradient(135deg, #0A2540 0%, #103358 45%, #20639B 100%)", primary: "#20639B" },
-    { name: "Sapphire Wave", css: "linear-gradient(135deg, #103358 0%, #20639B 50%, #3083CD 100%)", primary: "#3083CD" },
-    { name: "Cobalt Abyss", css: "linear-gradient(135deg, #0c2340 0%, #1e3a8a 55%, #3b82f6 100%)", primary: "#3b82f6" },
-    { name: "Midnight Azure", css: "linear-gradient(135deg, #0f172a 0%, #1e293b 40%, #0284c7 100%)", primary: "#0284c7" },
-    { name: "Royal Indigo", css: "linear-gradient(135deg, #1e1b4b 0%, #2e1065 40%, #4338ca 100%)", primary: "#4338ca" },
-    { name: "Slate Cyan", css: "linear-gradient(135deg, #0f2744 0%, #164e63 50%, #0891b2 100%)", primary: "#0891b2" }
+    { name: "Stormy Teal", css: "linear-gradient(135deg, #1d2d2c 0%, #197278 100%)", primary: "#197278" },
+    { name: "Dark Slate", css: "linear-gradient(135deg, #1f2f2e 0%, #283D3B 50%, #3a5552 100%)", primary: "#283D3B" },
+    { name: "Tomato Jam", css: "linear-gradient(135deg, #441814 0%, #772E25 50%, #C44536 100%)", primary: "#C44536" },
+    { name: "Chestnut Earth", css: "linear-gradient(135deg, #2c120e 0%, #772E25 100%)", primary: "#772E25" },
+    { name: "Teal Petal", css: "linear-gradient(135deg, #197278 0%, #2b5755 60%, #466e6b 100%)", primary: "#197278" },
+    { name: "Slate Terracotta", css: "linear-gradient(135deg, #283D3B 0%, #523733 50%, #C44536 100%)", primary: "#C44536" }
 ];
 
 export const DEFAULT_CONFIG = {

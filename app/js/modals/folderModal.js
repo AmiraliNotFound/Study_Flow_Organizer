@@ -1,45 +1,58 @@
 /**
  * Course Folder Linking & Windows Explorer Modal Controller
+ * Featuring Custom Styled Subject Dropdown
  */
 
 import { AppState, addOrUpdateMaterial, deleteMaterial } from '../state.js';
 import { pickFolder } from '../api.js';
+import { CustomSelect } from '../components/customSelect.js';
 
 let activeMaterialId = null;
+let folderSubjectSelect = null;
 
 export function openFolderModal(materialId = null, preselectedSubjectId = null) {
     const modal = document.getElementById('folderModal');
     if (!modal) return;
-
-    activeMaterialId = materialId;
-    const modalTitle = document.getElementById('folderModalTitle');
-    const form = document.getElementById('folderForm');
-    form.reset();
-
-    const subjectSelect = document.getElementById('folderSubjectSelect');
-    subjectSelect.innerHTML = AppState.subjects.map(s => `
-        <option value="${s.id}">${s.title} ${s.code ? `(${s.code})` : ''}</option>
-    `).join('');
 
     if (AppState.subjects.length === 0) {
         alert("Please create a course subject before linking course folders.");
         return;
     }
 
+    activeMaterialId = materialId;
+    const modalTitle = document.getElementById('folderModalTitle');
+    const form = document.getElementById('folderForm');
+    form.reset();
+
+    const subjectOptions = AppState.subjects.map(s => ({
+        value: s.id,
+        label: s.title,
+        secondary: s.code || ''
+    }));
+
+    if (folderSubjectSelect) {
+        folderSubjectSelect.setOptions(subjectOptions);
+    }
+
     if (materialId) {
         const mat = AppState.materials.find(m => m.id === materialId);
         if (mat) {
             modalTitle.textContent = 'Edit Course Folder';
-            subjectSelect.value = mat.subjectId;
+            if (folderSubjectSelect) {
+                folderSubjectSelect.setValue(mat.subjectId, false);
+            }
+            document.getElementById('folderSubjectSelect').value = mat.subjectId;
             document.getElementById('folderNameInput').value = mat.name;
             document.getElementById('folderPathInput').value = mat.filePath;
             document.getElementById('folderNotesInput').value = mat.notes || '';
         }
     } else {
         modalTitle.textContent = 'Link Course Folder';
-        if (preselectedSubjectId) {
-            subjectSelect.value = preselectedSubjectId;
+        const targetSubjId = preselectedSubjectId || AppState.subjects[0]?.id;
+        if (folderSubjectSelect) {
+            folderSubjectSelect.setValue(targetSubjId, false);
         }
+        document.getElementById('folderSubjectSelect').value = targetSubjId;
     }
 
     modal.classList.add('is-active');
@@ -52,6 +65,19 @@ export function closeFolderModal() {
 }
 
 export function initFolderModalEvents() {
+    // Initialize Custom Subject Dropdown
+    const subjectWrap = document.getElementById('folderSubjectSelectWrap');
+    if (subjectWrap) {
+        folderSubjectSelect = new CustomSelect({
+            container: subjectWrap,
+            placeholder: 'Select a course subject...',
+            onChange: (val) => {
+                const hiddenInput = document.getElementById('folderSubjectSelect');
+                if (hiddenInput) hiddenInput.value = val || '';
+            }
+        });
+    }
+
     document.getElementById('folderModalCloseBtn')?.addEventListener('click', closeFolderModal);
     document.getElementById('btnCancelFolder')?.addEventListener('click', closeFolderModal);
 
@@ -102,30 +128,36 @@ export function initFolderModalEvents() {
         }
     });
 
+    // Form submission
     document.getElementById('folderForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const subjectId = document.getElementById('folderSubjectSelect').value;
+        const subjectId = folderSubjectSelect ? folderSubjectSelect.getValue() : document.getElementById('folderSubjectSelect').value;
         const name = document.getElementById('folderNameInput').value.trim();
         const filePath = document.getElementById('folderPathInput').value.trim();
         const notes = document.getElementById('folderNotesInput').value.trim();
 
-        if (!name) {
-            alert('Folder label is required');
-            return;
-        }
-        if (!filePath) {
-            alert('Folder path is required');
+        if (!subjectId) {
+            alert('Please select a course subject');
             return;
         }
 
-        await addOrUpdateMaterial({
+        if (!name || !filePath) {
+            alert('Folder label and path are required');
+            return;
+        }
+
+        const materialPayload = {
             id: activeMaterialId,
             subjectId,
             name,
             filePath,
+            typeId: "mat_folder",
+            typeName: "Course Folder",
+            icon: "📁",
             notes
-        });
+        };
 
+        await addOrUpdateMaterial(materialPayload);
         closeFolderModal();
     });
 }

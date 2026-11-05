@@ -1,20 +1,30 @@
 /**
  * Add / Edit Item (Task or Event) Modal Controller
- * Featuring Custom Dual Calendar (Gregorian + Shamsi) & Custom Time Picker
+ * Featuring Custom Month Calendar (Dual Gregorian + Shamsi) & Custom Stepper Time Picker
  */
 
 import { AppState, addOrUpdateItem } from '../state.js';
 import { getDatePreset } from '../dateUtils.js';
-import { initCustomDatePicker, getSelectedDate, setSelectedDate, updateSelectorsFromDate } from '../components/customDatePicker.js';
-import { initCustomTimePicker, getSelectedTime, setSelectedTime } from '../components/customTimePicker.js';
+import { CustomDatePicker } from '../components/customDatePicker.js';
+import { CustomTimePicker } from '../components/customTimePicker.js';
+import { CustomSelect } from '../components/customSelect.js';
 
 let activeItemId = null;
 let activeKind = 'task';
 let activeTypeId = 'tt_hw';
 
+let subjectSelect = null;
+let datePicker = null;
+let timePicker = null;
+
 export function openItemModal(itemId = null, preselectedSubjectId = null, defaultKind = 'task') {
     const modal = document.getElementById('itemModal');
     if (!modal) return;
+
+    if (AppState.subjects.length === 0) {
+        alert("Please create a course subject before adding tasks or events.");
+        return;
+    }
 
     activeItemId = itemId;
     activeKind = defaultKind;
@@ -23,15 +33,15 @@ export function openItemModal(itemId = null, preselectedSubjectId = null, defaul
     const form = document.getElementById('itemForm');
     form.reset();
 
-    // Populate Subjects Dropdown
-    const subjectSelect = document.getElementById('itemSubjectSelect');
-    subjectSelect.innerHTML = AppState.subjects.map(s => `
-        <option value="${s.id}">${s.title} ${s.code ? `(${s.code})` : ''}</option>
-    `).join('');
+    // Populate Subjects Custom Dropdown
+    const subjectOptions = AppState.subjects.map(s => ({
+        value: s.id,
+        label: s.title,
+        secondary: s.code || ''
+    }));
 
-    if (AppState.subjects.length === 0) {
-        alert("Please create a course subject before adding tasks or events.");
-        return;
+    if (subjectSelect) {
+        subjectSelect.setOptions(subjectOptions);
     }
 
     if (itemId) {
@@ -41,7 +51,10 @@ export function openItemModal(itemId = null, preselectedSubjectId = null, defaul
             activeKind = item.kind;
             activeTypeId = item.typeId;
 
-            subjectSelect.value = item.subjectId;
+            if (subjectSelect) {
+                subjectSelect.setValue(item.subjectId, false);
+            }
+            document.getElementById('itemSubjectSelect').value = item.subjectId;
             document.getElementById('itemTitleInput').value = item.title;
             document.getElementById('taskDetailNumber').value = item.extraInfo?.number || '';
             document.getElementById('eventDetailNumber').value = item.extraInfo?.number || '';
@@ -49,23 +62,25 @@ export function openItemModal(itemId = null, preselectedSubjectId = null, defaul
             document.getElementById('itemNotesInput').value = item.extraInfo?.notes || '';
 
             const d = new Date(item.dueDate);
-            setSelectedDate(d);
-            setSelectedTime(d.getHours(), d.getMinutes());
+            if (datePicker) datePicker.setDate(d, false);
+            if (timePicker) timePicker.setTime(d.getHours(), d.getMinutes(), false);
         }
     } else {
         modalTitle.textContent = defaultKind === 'task' ? 'Add Task' : 'Add Event';
-        if (preselectedSubjectId) {
-            subjectSelect.value = preselectedSubjectId;
+        const targetSubjId = preselectedSubjectId || AppState.subjects[0]?.id;
+        if (subjectSelect) {
+            subjectSelect.setValue(targetSubjId, false);
         }
+        document.getElementById('itemSubjectSelect').value = targetSubjId;
+
         // Default: Tomorrow at 23:59
         const tomorrow = getDatePreset(1, 23, 59);
-        setSelectedDate(tomorrow);
-        setSelectedTime(23, 59);
+        if (datePicker) datePicker.setDate(tomorrow, false);
+        if (timePicker) timePicker.setTime(23, 59, false);
     }
 
     setKind(activeKind);
     updateTypePills();
-    updateSelectorsFromDate();
 
     modal.classList.add('is-active');
 }
@@ -138,23 +153,40 @@ function autoUpdateTitle() {
     }
 }
 
-export function applyDatePreset(daysAhead, hours, minutes) {
-    const preset = getDatePreset(daysAhead, hours, minutes);
-    setSelectedDate(preset);
-    setSelectedTime(hours, minutes);
-}
-
 export function initItemModalEvents() {
-    // 1. Initialize Custom Dual Date Picker (Gregorian + Shamsi)
-    const dateContainer = document.getElementById('customDatePickerSlot');
-    if (dateContainer) {
-        initCustomDatePicker(dateContainer);
+    // 1. Initialize Custom Subject Dropdown
+    const subjectWrap = document.getElementById('itemSubjectSelectWrap');
+    if (subjectWrap) {
+        subjectSelect = new CustomSelect({
+            container: subjectWrap,
+            placeholder: 'Select a course subject...',
+            onChange: (val) => {
+                const hiddenInput = document.getElementById('itemSubjectSelect');
+                if (hiddenInput) hiddenInput.value = val || '';
+            }
+        });
     }
 
-    // 2. Initialize Custom Time Picker
-    const timeContainer = document.getElementById('customTimePickerSlot');
-    if (timeContainer) {
-        initCustomTimePicker(timeContainer);
+    // 2. Initialize Custom Month Calendar Grid Viewer (Dual Day Numbering)
+    const dateSlot = document.getElementById('customDatePickerSlot');
+    if (dateSlot) {
+        datePicker = new CustomDatePicker({
+            container: dateSlot,
+            initialDate: new Date(),
+            onChange: (date) => {
+                // Preserved
+            }
+        });
+    }
+
+    // 3. Initialize Custom Time Picker (Stepper)
+    const timeSlot = document.getElementById('customTimePickerSlot');
+    if (timeSlot) {
+        timePicker = new CustomTimePicker({
+            container: timeSlot,
+            initialHours: 23,
+            initialMinutes: 59
+        });
     }
 
     // Segmented tab
@@ -164,29 +196,27 @@ export function initItemModalEvents() {
     document.getElementById('taskDetailNumber')?.addEventListener('input', autoUpdateTitle);
     document.getElementById('eventDetailNumber')?.addEventListener('input', autoUpdateTitle);
 
-    // Date presets
-    document.getElementById('presetBtn0')?.addEventListener('click', () => applyDatePreset(0, 23, 59));
-    document.getElementById('presetBtn1')?.addEventListener('click', () => applyDatePreset(1, 23, 59));
-    document.getElementById('presetBtn2')?.addEventListener('click', () => applyDatePreset(2, 23, 59));
-    document.getElementById('presetBtn5')?.addEventListener('click', () => applyDatePreset(5, 23, 59));
-    document.getElementById('presetBtn7')?.addEventListener('click', () => applyDatePreset(7, 23, 59));
-
     document.getElementById('itemModalCloseBtn')?.addEventListener('click', closeItemModal);
     document.getElementById('btnCancelItem')?.addEventListener('click', closeItemModal);
 
     // Form submission
     document.getElementById('itemForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const subjectId = document.getElementById('itemSubjectSelect').value;
+        const subjectId = subjectSelect ? subjectSelect.getValue() : document.getElementById('itemSubjectSelect').value;
         const title = document.getElementById('itemTitleInput').value.trim();
+
+        if (!subjectId) {
+            alert('Please select a course subject');
+            return;
+        }
 
         if (!title) {
             alert('Title is required');
             return;
         }
 
-        const dateObj = getSelectedDate();
-        const { hours, minutes } = getSelectedTime();
+        const dateObj = datePicker ? datePicker.getDate() : new Date();
+        const { hours, minutes } = timePicker ? timePicker.getTime() : { hours: 23, minutes: 59 };
         dateObj.setHours(hours, minutes, 0, 0);
 
         const dueDate = dateObj.toISOString();

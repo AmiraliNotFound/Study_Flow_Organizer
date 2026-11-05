@@ -1,9 +1,10 @@
 /**
- * Study Flow Organizer v4.1 - Main Application Controller
+ * Study Flow Organizer v4.2 - Main Application Controller
+ * Floating Navigation, Flat/Glass Theme Settings, Custom Controls & Master Color Palette
  */
 
 import { AppState, subscribe, setAppStateData } from './state.js';
-import { loadData, isServerConnected } from './api.js';
+import { loadData, isServerConnected, openDataDirectory } from './api.js';
 import { formatDate } from './dateUtils.js';
 import { formatDualDate } from './jalali.js';
 
@@ -51,15 +52,12 @@ function updateHeaderDateDisplay() {
     if (!dateHeader) return;
     const now = new Date();
     const dual = formatDualDate(now);
-    const greg = formatDate(now);
     if (dual) {
         dateHeader.innerHTML = `
-            <span>${greg.weekday}, ${greg.shortDate}</span>
-            <span style="opacity: 0.6; margin: 0 4px;">•</span>
-            <span style="color: #38BDF8; font-weight: 600;">${dual.shamsiFullPersian}</span>
+            <span>${dual.gregFull}</span>
+            <span style="opacity: 0.5; margin: 0 5px;">•</span>
+            <span style="color: var(--palette-stormy-teal); font-weight: 700;">${dual.shamsiFull}</span>
         `;
-    } else {
-        dateHeader.textContent = greg.fullDisplay;
     }
 }
 
@@ -98,19 +96,34 @@ function updateDiskFileBadge() {
 
     if (isServerConnected()) {
         badge.className = 'disk-sync-badge';
-        text.textContent = '🟢 AppData Sync: Active';
+        text.textContent = 'AppData Storage Active';
     } else {
         badge.className = 'disk-sync-badge unlinked';
-        text.textContent = '🟠 Browser Mode (localStorage)';
+        text.textContent = 'Offline (localStorage)';
     }
 }
 
 // View switcher
+const VIEW_METADATA = {
+    grid: { label: 'Cards View', icon: '🗂️' },
+    table: { label: 'Matrix Table', icon: '📑' },
+    timeline: { label: 'Timeline View', icon: '⏳' },
+    kanban: { label: 'Kanban Board', icon: '📌' }
+};
+
 function switchView(viewName) {
+    if (!VIEW_METADATA[viewName]) return;
     AppState.currentView = viewName;
-    document.querySelectorAll('.view-tab-btn').forEach(btn => {
+
+    const activeIcon = document.getElementById('activeViewIcon');
+    const activeLabel = document.getElementById('activeViewLabel');
+    if (activeIcon) activeIcon.textContent = VIEW_METADATA[viewName].icon;
+    if (activeLabel) activeLabel.textContent = VIEW_METADATA[viewName].label;
+
+    document.querySelectorAll('.view-menu-item').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.view === viewName);
     });
+
     renderActiveView();
 }
 
@@ -123,25 +136,104 @@ function setFilter(filterName) {
     renderActiveView();
 }
 
+// Theme Manager (Glassmorphic vs Flat)
+function applyTheme(themeName) {
+    const isFlat = themeName === 'flat';
+    document.body.classList.toggle('theme-flat', isFlat);
+    localStorage.setItem('study_flow_theme_style', isFlat ? 'flat' : 'glass');
+
+    const optGlass = document.getElementById('themeOptionGlass');
+    const optFlat = document.getElementById('themeOptionFlat');
+    if (optGlass && optFlat) {
+        optGlass.classList.toggle('is-active', !isFlat);
+        optFlat.classList.toggle('is-active', isFlat);
+    }
+}
+
+function initTheme() {
+    const saved = localStorage.getItem('study_flow_theme_style') || 'glass';
+    applyTheme(saved);
+}
+
 // Setup all event listeners
 function initAppEvents() {
-    // Header action buttons
-    document.getElementById('headerNewTaskBtn')?.addEventListener('click', () => openItemModal(null, null, 'task'));
-    document.getElementById('headerNewEventBtn')?.addEventListener('click', () => openItemModal(null, null, 'event'));
-    document.getElementById('headerNewMaterialBtn')?.addEventListener('click', () => openFolderModal());
-    document.getElementById('headerNewSubjectBtn')?.addEventListener('click', () => openSubjectModal());
-    document.getElementById('diskSyncBadge')?.addEventListener('click', openBackupModal);
-    document.getElementById('btnBackupModalHeader')?.addEventListener('click', openBackupModal);
-    document.getElementById('btnShortcutsHeader')?.addEventListener('click', () => {
-        document.getElementById('shortcutsModal')?.classList.add('is-active');
+    // 1. Floating "+" Create Button & Dropdown
+    const createBtn = document.getElementById('headerMainCreateBtn');
+    const createMenu = document.getElementById('headerCreateMenu');
+
+    createBtn?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        createMenu?.classList.toggle('hidden');
     });
 
-    // Shortcuts modal close
-    document.getElementById('shortcutsModalCloseBtn')?.addEventListener('click', () => {
-        document.getElementById('shortcutsModal')?.classList.remove('is-active');
+    document.getElementById('menuNewTaskBtn')?.addEventListener('click', () => {
+        createMenu?.classList.add('hidden');
+        openItemModal(null, null, 'task');
     });
-    document.getElementById('btnCloseShortcuts')?.addEventListener('click', () => {
-        document.getElementById('shortcutsModal')?.classList.remove('is-active');
+
+    document.getElementById('menuNewEventBtn')?.addEventListener('click', () => {
+        createMenu?.classList.add('hidden');
+        openItemModal(null, null, 'event');
+    });
+
+    document.getElementById('menuNewSubjectBtn')?.addEventListener('click', () => {
+        createMenu?.classList.add('hidden');
+        openSubjectModal();
+    });
+
+    document.getElementById('menuNewMaterialBtn')?.addEventListener('click', () => {
+        createMenu?.classList.add('hidden');
+        openFolderModal();
+    });
+
+    // 2. Compact View Selector Dropdown
+    const viewSelectorBtn = document.getElementById('viewSelectorBtn');
+    const viewSelectorMenu = document.getElementById('viewSelectorMenu');
+
+    viewSelectorBtn?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        viewSelectorMenu?.classList.toggle('hidden');
+    });
+
+    document.querySelectorAll('.view-menu-item').forEach(btn => {
+        btn.addEventListener('click', () => {
+            switchView(btn.dataset.view);
+            viewSelectorMenu?.classList.add('hidden');
+        });
+    });
+
+    // Close floating menus when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!createBtn?.contains(e.target) && !createMenu?.contains(e.target)) {
+            createMenu?.classList.add('hidden');
+        }
+        if (!viewSelectorBtn?.contains(e.target) && !viewSelectorMenu?.contains(e.target)) {
+            viewSelectorMenu?.classList.add('hidden');
+        }
+    });
+
+    // 3. Storage & Settings Modals
+    document.getElementById('diskSyncBadge')?.addEventListener('click', openBackupModal);
+    document.getElementById('btnBackupModalHeader')?.addEventListener('click', openBackupModal);
+
+    const settingsModal = document.getElementById('settingsModal');
+    document.getElementById('btnSettingsHeader')?.addEventListener('click', () => {
+        settingsModal?.classList.add('is-active');
+    });
+    document.getElementById('settingsModalCloseBtn')?.addEventListener('click', () => {
+        settingsModal?.classList.remove('is-active');
+    });
+    document.getElementById('btnCloseSettings')?.addEventListener('click', () => {
+        settingsModal?.classList.remove('is-active');
+    });
+
+    // Theme Switcher Options inside Settings
+    document.getElementById('themeOptionGlass')?.addEventListener('click', () => applyTheme('glass'));
+    document.getElementById('themeOptionFlat')?.addEventListener('click', () => applyTheme('flat'));
+
+    // Open AppData in Explorer from Settings
+    document.getElementById('btnSettingsOpenFolder')?.addEventListener('click', async () => {
+        await openDataDirectory();
     });
 
     // Search bar
@@ -161,11 +253,6 @@ function initAppEvents() {
         renderActiveView();
     });
 
-    // View tabs
-    document.querySelectorAll('.view-tab-btn').forEach(btn => {
-        btn.addEventListener('click', () => switchView(btn.dataset.view));
-    });
-
     // Filter pills
     document.querySelectorAll('.filter-pill').forEach(btn => {
         btn.addEventListener('click', () => setFilter(btn.dataset.filter));
@@ -179,6 +266,8 @@ function initAppEvents() {
         }
         if (e.key === 'Escape') {
             document.querySelectorAll('.modal-overlay.is-active').forEach(m => m.classList.remove('is-active'));
+            createMenu?.classList.add('hidden');
+            viewSelectorMenu?.classList.add('hidden');
         }
         if ((e.ctrlKey && e.key.toLowerCase() === 'f') || (e.key === '/' && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName))) {
             e.preventDefault();
@@ -202,6 +291,7 @@ function initAppEvents() {
 
 // Bootstrap
 window.addEventListener('DOMContentLoaded', async () => {
+    initTheme();
     initItemModalEvents();
     initSubjectModalEvents();
     initFolderModalEvents();

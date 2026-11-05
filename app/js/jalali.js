@@ -2,38 +2,39 @@
  * Mathematically Exact Jalali (Shamsi / Persian) Calendar Engine
  * Based on the astronomical Kazimierz M. Borkowski 33-year leap cycle algorithm.
  * Zero external dependencies.
+ * 
+ * Configured for 100% English Latin text & Latin digits (no Persian/Arabic script).
  */
 
-export const JALALI_MONTH_NAMES = [
-    { nameFa: "فروردین", nameEn: "Farvardin", days: 31 },
-    { nameFa: "اردیبهشت", nameEn: "Ordibehesht", days: 31 },
-    { nameFa: "خرداد", nameEn: "Khordad", days: 31 },
-    { nameFa: "تیر", nameEn: "Tir", days: 31 },
-    { nameFa: "مرداد", nameEn: "Mordad", days: 31 },
-    { nameFa: "شهریور", nameEn: "Shahrivar", days: 31 },
-    { nameFa: "مهر", nameEn: "Mehr", days: 30 },
-    { nameFa: "آبان", nameEn: "Aban", days: 30 },
-    { nameFa: "آذر", nameEn: "Azar", days: 30 },
-    { nameFa: "دی", nameEn: "Dey", days: 30 },
-    { nameFa: "بهمن", nameEn: "Bahman", days: 30 },
-    { nameFa: "اسفند", nameEn: "Esfand", days: 29 } // 30 on leap years
+export const JALALI_MONTH_NAMES_EN = [
+    { nameEn: "Farvardin", days: 31 },
+    { nameEn: "Ordibehesht", days: 31 },
+    { nameEn: "Khordad", days: 31 },
+    { nameEn: "Tir", days: 31 },
+    { nameEn: "Mordad", days: 31 },
+    { nameEn: "Shahrivar", days: 31 },
+    { nameEn: "Mehr", days: 30 },
+    { nameEn: "Aban", days: 30 },
+    { nameEn: "Azar", days: 30 },
+    { nameEn: "Dey", days: 30 },
+    { nameEn: "Bahman", days: 30 },
+    { nameEn: "Esfand", days: 29 } // 30 on leap years
 ];
 
-export const JALALI_WEEKDAYS = [
-    { nameFa: "یک‌شنبه", nameEn: "Yekshanbeh", index: 0 }, // Sun
-    { nameFa: "دوشنبه", nameEn: "Doshanbeh", index: 1 },   // Mon
-    { nameFa: "سه‌شنبه", nameEn: "Seshanbeh", index: 2 },   // Tue
-    { nameFa: "چهارشنبه", nameEn: "Chaharshanbeh", index: 3 },// Wed
-    { nameFa: "پنج‌شنبه", nameEn: "Panjshanbeh", index: 4 }, // Thu
-    { nameFa: "جمعه", nameEn: "Jomeh", index: 5 },          // Fri
-    { nameFa: "شنبه", nameEn: "Shanbeh", index: 6 }         // Sat
+export const GREGORIAN_MONTH_NAMES_EN = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
 ];
 
-const PERSIAN_DIGITS = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
-
-export function toPersianDigits(num) {
-    return String(num).replace(/[0-9]/g, digit => PERSIAN_DIGITS[parseInt(digit, 10)]);
-}
+export const GREGORIAN_WEEKDAYS_EN = [
+    { short: "Sun", full: "Sunday" },
+    { short: "Mon", full: "Monday" },
+    { short: "Tue", full: "Tuesday" },
+    { short: "Wed", full: "Wednesday" },
+    { short: "Thu", full: "Thursday" },
+    { short: "Fri", full: "Friday" },
+    { short: "Sat", full: "Saturday" }
+];
 
 /**
  * Check if a Jalali year is a leap year.
@@ -115,7 +116,7 @@ export function jalaliToGregorian(jy, jm, jd) {
 }
 
 /**
- * Formats a Date object into both Gregorian and exact Shamsi details.
+ * Formats a Date object into both Gregorian and exact Shamsi details in 100% English.
  */
 export function formatDualDate(dateInput) {
     const dateObj = dateInput instanceof Date ? dateInput : new Date(dateInput);
@@ -130,25 +131,30 @@ export function formatDualDate(dateInput) {
     const { jy, jm, jd } = gregorianToJalali(gy, gm, gd);
     const dayOfWeek = dateObj.getDay();
 
-    const monthObj = JALALI_MONTH_NAMES[jm - 1] || JALALI_MONTH_NAMES[0];
-    const weekdayObj = JALALI_WEEKDAYS[dayOfWeek] || JALALI_WEEKDAYS[0];
+    const monthObj = JALALI_MONTH_NAMES_EN[jm - 1] || JALALI_MONTH_NAMES_EN[0];
+    const gregMonthName = GREGORIAN_MONTH_NAMES_EN[gm - 1];
+    const gregWeekday = GREGORIAN_WEEKDAYS_EN[dayOfWeek];
 
     const shamsiShort = `${jy}/${String(jm).padStart(2, '0')}/${String(jd).padStart(2, '0')}`;
-    const shamsiFull = `${weekdayObj.nameFa}، ${jd} ${monthObj.nameFa} ${jy} (${hours}:${minutes})`;
-    const shamsiFullPersian = `${weekdayObj.nameFa}، ${toPersianDigits(jd)} ${monthObj.nameFa} ${toPersianDigits(jy)} (${toPersianDigits(hours)}:${toPersianDigits(minutes)})`;
+    const shamsiFull = `${jd} ${monthObj.nameEn} ${jy}`;
+    const gregFull = `${gregWeekday.full}, ${gregMonthName.slice(0, 3)} ${gd}, ${gy}`;
 
     return {
+        gy,
+        gm,
+        gd,
         jy,
         jm,
         jd,
-        monthNameFa: monthObj.nameFa,
         monthNameEn: monthObj.nameEn,
-        weekdayFa: weekdayObj.nameFa,
-        weekdayEn: weekdayObj.nameEn,
+        gregMonthName,
+        weekdayEn: gregWeekday.full,
+        weekdayShort: gregWeekday.short,
         timeStr: `${hours}:${minutes}`,
         shamsiShort,
         shamsiFull,
-        shamsiFullPersian,
-        dualSummary: `${shamsiShort} • ${gy}-${String(gm).padStart(2, '0')}-${String(gd).padStart(2, '0')}`
+        gregFull,
+        headerDual: `${gregWeekday.full}, ${gregMonthName.slice(0, 3)} ${gd}, ${gy}  •  ${jd} ${monthObj.nameEn} ${jy}`,
+        dualSummary: `${gy}-${String(gm).padStart(2, '0')}-${String(gd).padStart(2, '0')} (${jd} ${monthObj.nameEn})`
     };
 }

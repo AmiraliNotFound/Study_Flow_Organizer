@@ -42,33 +42,53 @@
                     <span id="diskSyncText">Checking Server...</span>
                 </div>
 
-                <!-- Primary Creation Buttons -->
-                <button type="button" class="btn btn-primary btn-sm" id="headerNewTaskBtn">
-                    <span>+ New Task</span>
-                </button>
-                <button type="button" class="btn btn-secondary btn-sm" id="headerNewEventBtn">
-                    <span>+ New Event</span>
-                </button>
-                <button type="button" class="btn btn-secondary btn-sm" id="headerNewMaterialBtn">
-                    <span>+ Course Folder</span>
-                </button>
-                <button type="button" class="btn btn-secondary btn-sm" id="headerNewSubjectBtn">
-                    <span>+ Subject</span>
-                </button>
+                <!-- Compact Single "+" Create Button with Dropdown -->
+                <div class="dropdown-wrap" id="headerCreateDropdownWrap">
+                    <button type="button" class="btn btn-primary btn-create-floating" id="headerMainCreateBtn" title="Create New...">
+                        <span class="btn-create-icon">+</span>
+                        <span class="btn-create-label">Create</span>
+                        <span class="dropdown-chevron">▾</span>
+                    </button>
+                    <div class="floating-dropdown-menu hidden" id="headerCreateMenu">
+                        <button type="button" class="dropdown-item" id="menuNewTaskBtn">
+                            <span class="item-icon">📋</span>
+                            <div class="item-content">
+                                <span class="item-title">New Task</span>
+                                <span class="item-desc">Homework, assignment, or project</span>
+                            </div>
+                        </button>
+                        <button type="button" class="dropdown-item" id="menuNewEventBtn">
+                            <span class="item-icon">📅</span>
+                            <div class="item-content">
+                                <span class="item-title">New Event</span>
+                                <span class="item-desc">Quiz, exam, or review session</span>
+                            </div>
+                        </button>
+                        <div class="dropdown-divider"></div>
+                        <button type="button" class="dropdown-item" id="menuNewSubjectBtn">
+                            <span class="item-icon">📚</span>
+                            <div class="item-content">
+                                <span class="item-title">New Course Subject</span>
+                                <span class="item-desc">Add an academic course</span>
+                            </div>
+                        </button>
+                        <button type="button" class="dropdown-item" id="menuNewMaterialBtn">
+                            <span class="item-icon">📁</span>
+                            <div class="item-content">
+                                <span class="item-title">Link Course Folder</span>
+                                <span class="item-desc">Connect materials to local Explorer</span>
+                            </div>
+                        </button>
+                    </div>
+                </div>
 
-                <!-- Storage & Shortcuts -->
+                <!-- Storage & Settings -->
                 <button type="button" class="btn btn-secondary btn-sm" id="btnBackupModalHeader" title="AppData Storage & Backup">
                     <span>💾 Storage</span>
                 </button>
-                <button type="button" class="btn btn-secondary btn-icon" id="btnShortcutsHeader" title="Keyboard Shortcuts">
-                    ⌨️
+                <button type="button" class="btn btn-secondary btn-sm" id="btnSettingsHeader" title="Settings & Visual Preferences">
+                    <span>⚙️ Settings</span>
                 </button>
-
-                <!-- User Profile Badge -->
-                <div class="user-badge">
-                    <div class="user-avatar-circle">ST</div>
-                    <span>STUDENT</span>
-                </div>
             </div>
         </div>
     </header>
@@ -88,20 +108,27 @@
                 <button type="button" id="clearSearchBtn" class="search-clear">&times;</button>
             </div>
 
-            <!-- View Switcher: Cards, Matrix, Timeline, Kanban -->
-            <div class="view-switcher">
-                <button type="button" class="view-tab-btn active" data-view="grid" title="Cards Grid View">
-                    <span>🗂️ Cards</span>
+            <!-- Compact View Switcher Dropdown -->
+            <div class="view-dropdown-wrap" id="viewSelectorWrap">
+                <button type="button" class="view-selector-btn" id="viewSelectorBtn" title="Select View">
+                    <span id="activeViewIcon">🗂️</span>
+                    <span id="activeViewLabel">Cards View</span>
+                    <span class="dropdown-chevron">▾</span>
                 </button>
-                <button type="button" class="view-tab-btn" data-view="table" title="Schedule Matrix Table">
-                    <span>📑 Matrix</span>
-                </button>
-                <button type="button" class="view-tab-btn" data-view="timeline" title="Proportional Timeline">
-                    <span>⏳ Timeline</span>
-                </button>
-                <button type="button" class="view-tab-btn" data-view="kanban" title="Interactive Kanban Board">
-                    <span>📌 Kanban</span>
-                </button>
+                <div class="view-dropdown-menu hidden" id="viewSelectorMenu">
+                    <button type="button" class="view-menu-item active" data-view="grid">
+                        <span>🗂️</span> <span>Cards Grid</span>
+                    </button>
+                    <button type="button" class="view-menu-item" data-view="table">
+                        <span>📑</span> <span>Matrix Table</span>
+                    </button>
+                    <button type="button" class="view-menu-item" data-view="timeline">
+                        <span>⏳</span> <span>Timeline</span>
+                    </button>
+                    <button type="button" class="view-menu-item" data-view="kanban">
+                        <span>📌</span> <span>Kanban Board</span>
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -171,10 +198,11 @@
                         <div class="type-pills-container" id="modalTypePillsWrap"></div>
                     </div>
 
-                    <!-- Course Subject -->
+                    <!-- Course Subject (Custom Styled Dropdown) -->
                     <div class="form-group">
-                        <label class="form-label" for="itemSubjectSelect">Course Subject:</label>
-                        <select id="itemSubjectSelect" class="form-select" required></select>
+                        <label class="form-label">Course Subject:</label>
+                        <div id="itemSubjectSelectWrap"></div>
+                        <input type="hidden" id="itemSubjectSelect" required>
                     </div>
 
                     <!-- Extra Info Section -->
@@ -218,22 +246,13 @@
                         </div>
                     </div>
 
-                    <!-- Custom Dual Date & Time Picker Section -->
+                    <!-- Custom Dual Date & Time Picker Section (Month Calendar Viewer) -->
                     <div class="form-group">
                         <label class="form-label">
-                            <span>Target Due Date (شمسی و میلادی):</span>
+                            <span>Target Due Date & Time (Gregorian & Shamsi Calendar):</span>
                         </label>
                         <div class="dual-date-picker-box">
-                            <div class="date-shortcuts-row">
-                                <span style="font-size: 0.74rem; color: var(--text-muted);">Presets:</span>
-                                <button type="button" class="date-shortcut-btn" id="presetBtn0">Today (23:59)</button>
-                                <button type="button" class="date-shortcut-btn" id="presetBtn1">Tomorrow</button>
-                                <button type="button" class="date-shortcut-btn" id="presetBtn2">In 2 Days</button>
-                                <button type="button" class="date-shortcut-btn" id="presetBtn5">In 5 Days</button>
-                                <button type="button" class="date-shortcut-btn" id="presetBtn7">In 1 Week</button>
-                            </div>
-
-                            <!-- Custom Dual Date Picker Slot (Gregorian + Shamsi) -->
+                            <!-- Custom Dual Date Picker Slot (Interactive Month Grid) -->
                             <div id="customDatePickerSlot"></div>
 
                             <!-- Custom Time Picker Slot -->
@@ -297,9 +316,11 @@
             </div>
             <form id="folderForm">
                 <div class="modal-body">
+                    <!-- Course Subject (Custom Styled Dropdown) -->
                     <div class="form-group">
-                        <label class="form-label" for="folderSubjectSelect">Course Subject:</label>
-                        <select id="folderSubjectSelect" class="form-select" required></select>
+                        <label class="form-label">Course Subject:</label>
+                        <div id="folderSubjectSelectWrap"></div>
+                        <input type="hidden" id="folderSubjectSelect" required>
                     </div>
 
                     <div class="material-drop-box">
@@ -393,34 +414,76 @@
     </div>
 
     <!-- ========================================================================
-         MODAL 5: KEYBOARD SHORTCUTS
+         MODAL 5: SETTINGS & PREFERENCES (With Embedded Keyboard Shortcuts)
          ======================================================================== -->
-    <div id="shortcutsModal" class="modal-overlay">
-        <div class="modal-window" style="max-width: 480px;">
+    <div id="settingsModal" class="modal-overlay">
+        <div class="modal-window" style="max-width: 540px;">
             <div class="modal-header">
-                <h2>Keyboard Shortcuts Guide</h2>
-                <button type="button" class="modal-close-btn" id="shortcutsModalCloseBtn">&times;</button>
+                <h2>Settings & Preferences</h2>
+                <button type="button" class="modal-close-btn" id="settingsModalCloseBtn">&times;</button>
             </div>
-            <div class="modal-body" style="gap: 10px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.06);">
-                    <span style="font-size: 0.85rem; color: var(--text-secondary);">Open New Item Modal</span>
-                    <kbd style="background: rgba(16, 51, 88, 0.8); border: 1px solid var(--card-slate-border); padding: 3px 8px; border-radius: 6px; font-family: monospace; font-size: 0.8rem;">Ctrl + N</kbd>
+            <div class="modal-body" style="gap: 16px;">
+                <!-- Theme Option Selector: Glassmorphic vs Flat -->
+                <div class="form-group">
+                    <label class="form-label" style="font-weight: 700; color: var(--palette-powder-petal);">
+                        Visual Theme Style:
+                    </label>
+                    <div class="theme-switch-container">
+                        <div class="theme-card-option is-active" id="themeOptionGlass" data-theme="glass">
+                            <span class="theme-card-icon">🔮</span>
+                            <span class="theme-card-title">Glassmorphic</span>
+                            <span class="theme-card-desc">Atmospheric glows, deep blur & glass depth</span>
+                        </div>
+                        <div class="theme-card-option" id="themeOptionFlat" data-theme="flat">
+                            <span class="theme-card-icon">🟩</span>
+                            <span class="theme-card-title">Flat Minimal</span>
+                            <span class="theme-card-desc">Solid slate surfaces, hairline borders & zero blur</span>
+                        </div>
+                    </div>
                 </div>
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.06);">
-                    <span style="font-size: 0.85rem; color: var(--text-secondary);">Focus Global Search</span>
-                    <kbd style="background: rgba(16, 51, 88, 0.8); border: 1px solid var(--card-slate-border); padding: 3px 8px; border-radius: 6px; font-family: monospace; font-size: 0.8rem;">/ or Ctrl + F</kbd>
+
+                <!-- Storage & Data Shortcut -->
+                <div class="disk-sync-box" style="margin: 0; padding: 12px 14px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                        <div>
+                            <strong style="font-size: 0.88rem; color: var(--palette-powder-petal);">Local AppData Storage</strong>
+                            <p style="font-size: 0.76rem; color: var(--text-muted); margin-top: 2px;">
+                                Persistent OS database decoupled from git updates
+                            </p>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-cyan" id="btnSettingsOpenFolder">
+                            📂 Explorer
+                        </button>
+                    </div>
                 </div>
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.06);">
-                    <span style="font-size: 0.85rem; color: var(--text-secondary);">Switch View (Cards / Matrix / Timeline / Kanban)</span>
-                    <kbd style="background: rgba(16, 51, 88, 0.8); border: 1px solid var(--card-slate-border); padding: 3px 8px; border-radius: 6px; font-family: monospace; font-size: 0.8rem;">Ctrl + Shift + V</kbd>
-                </div>
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 0;">
-                    <span style="font-size: 0.85rem; color: var(--text-secondary);">Close Active Dialog</span>
-                    <kbd style="background: rgba(16, 51, 88, 0.8); border: 1px solid var(--card-slate-border); padding: 3px 8px; border-radius: 6px; font-family: monospace; font-size: 0.8rem;">Escape</kbd>
+
+                <!-- Keyboard Shortcuts Cheat Sheet (Embedded Inside Settings) -->
+                <div class="form-group" style="margin-top: 4px;">
+                    <label class="form-label" style="font-weight: 700; color: var(--palette-powder-petal);">
+                        Keyboard Shortcuts Cheat Sheet:
+                    </label>
+                    <div style="display: flex; flex-direction: column; gap: 6px; background: rgba(40, 61, 59, 0.6); padding: 10px 14px; border-radius: var(--radius-sm); border: 1px solid rgba(237, 221, 212, 0.12);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid rgba(237, 221, 212, 0.08);">
+                            <span style="font-size: 0.82rem; color: var(--text-secondary);">Open New Item Modal</span>
+                            <kbd style="background: rgba(30, 46, 44, 0.9); border: 1px solid rgba(237, 221, 212, 0.18); padding: 2px 7px; border-radius: 5px; font-family: monospace; font-size: 0.78rem;">Ctrl + N</kbd>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid rgba(237, 221, 212, 0.08);">
+                            <span style="font-size: 0.82rem; color: var(--text-secondary);">Focus Global Search</span>
+                            <kbd style="background: rgba(30, 46, 44, 0.9); border: 1px solid rgba(237, 221, 212, 0.18); padding: 2px 7px; border-radius: 5px; font-family: monospace; font-size: 0.78rem;">/ or Ctrl + F</kbd>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid rgba(237, 221, 212, 0.08);">
+                            <span style="font-size: 0.82rem; color: var(--text-secondary);">Switch View (Cards / Matrix / Timeline / Kanban)</span>
+                            <kbd style="background: rgba(30, 46, 44, 0.9); border: 1px solid rgba(237, 221, 212, 0.18); padding: 2px 7px; border-radius: 5px; font-family: monospace; font-size: 0.78rem;">Ctrl + Shift + V</kbd>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 0;">
+                            <span style="font-size: 0.82rem; color: var(--text-secondary);">Close Active Dialog</span>
+                            <kbd style="background: rgba(30, 46, 44, 0.9); border: 1px solid rgba(237, 221, 212, 0.18); padding: 2px 7px; border-radius: 5px; font-family: monospace; font-size: 0.78rem;">Escape</kbd>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-primary" id="btnCloseShortcuts">Got it</button>
+                <button type="button" class="btn btn-primary" id="btnCloseSettings">Done</button>
             </div>
         </div>
     </div>

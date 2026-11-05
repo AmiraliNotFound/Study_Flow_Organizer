@@ -1,112 +1,160 @@
 /**
- * Custom Time Selector Component with Quick Presets
+ * Custom Styled Time Picker Component
+ * Eliminates all native <select> elements in favor of a sleek stepper and preset interface.
  */
 
-let selectedHours = 23;
-let selectedMinutes = 59;
+export class CustomTimePicker {
+    constructor({ container, initialHours = 23, initialMinutes = 59, onChange = null }) {
+        this.container = typeof container === 'string' ? document.getElementById(container) : container;
+        this.hours = Math.max(0, Math.min(23, parseInt(initialHours, 10) || 0));
+        this.minutes = Math.max(0, Math.min(59, parseInt(initialMinutes, 10) || 0));
+        this.onChange = onChange;
 
-export function getSelectedTime() {
-    const hh = String(selectedHours).padStart(2, '0');
-    const mm = String(selectedMinutes).padStart(2, '0');
-    return { hours: selectedHours, minutes: selectedMinutes, timeStr: `${hh}:${mm}` };
-}
-
-export function setSelectedTime(hh, mm) {
-    selectedHours = Math.max(0, Math.min(23, parseInt(hh, 10) || 0));
-    selectedMinutes = Math.max(0, Math.min(59, parseInt(mm, 10) || 0));
-    updateInputs();
-}
-
-export function initCustomTimePicker(container, onTimeChanged) {
-    if (!container) return;
-
-    container.innerHTML = `
-        <div class="custom-time-picker">
-            <div class="time-spinner-row">
-                <div class="time-spinner-col">
-                    <label class="time-spinner-label">ساعت (Hour):</label>
-                    <select id="timeSelectHour" class="form-select time-dropdown"></select>
-                </div>
-                <div class="time-colon">:</div>
-                <div class="time-spinner-col">
-                    <label class="time-spinner-label">دقیقه (Minute):</label>
-                    <select id="timeSelectMinute" class="form-select time-dropdown"></select>
-                </div>
-            </div>
-
-            <!-- Quick time preset chips -->
-            <div class="time-presets-chips">
-                <button type="button" class="time-chip" data-h="9" data-m="0">09:00 Morning</button>
-                <button type="button" class="time-chip" data-h="12" data-m="0">12:00 Noon</button>
-                <button type="button" class="time-chip" data-h="18" data-m="0">18:00 Evening</button>
-                <button type="button" class="time-chip active" data-h="23" data-m="59">23:59 End of Day</button>
-            </div>
-        </div>
-    `;
-
-    const selH = container.querySelector('#timeSelectHour');
-    const selM = container.querySelector('#timeSelectMinute');
-
-    // Populate Hours (00-23)
-    for (let h = 0; h < 24; h++) {
-        const opt = document.createElement('option');
-        opt.value = h;
-        opt.textContent = String(h).padStart(2, '0');
-        selH.appendChild(opt);
+        this.render();
     }
 
-    // Populate Minutes (00-59)
-    for (let m = 0; m < 60; m += 1) {
-        const opt = document.createElement('option');
-        opt.value = m;
-        opt.textContent = String(m).padStart(2, '0');
-        selM.appendChild(opt);
-    }
+    render() {
+        if (!this.container) return;
+        this.container.innerHTML = '';
 
-    selH.value = selectedHours;
-    selM.value = selectedMinutes;
+        const wrapper = document.createElement('div');
+        wrapper.className = 'custom-time-picker-wrapper';
 
-    const fireChange = () => {
-        selectedHours = parseInt(selH.value, 10);
-        selectedMinutes = parseInt(selM.value, 10);
-        highlightActivePreset();
-        if (typeof onTimeChanged === 'function') {
-            onTimeChanged(getSelectedTime());
-        }
-    };
+        // Title & Presets
+        const header = document.createElement('div');
+        header.className = 'time-picker-header';
 
-    selH.addEventListener('change', fireChange);
-    selM.addEventListener('change', fireChange);
+        const label = document.createElement('span');
+        label.className = 'time-picker-label';
+        label.textContent = 'Due Time:';
 
-    // Preset chips
-    container.querySelectorAll('.time-chip').forEach(chip => {
-        chip.addEventListener('click', () => {
-            const h = parseInt(chip.dataset.h, 10);
-            const m = parseInt(chip.dataset.m, 10);
-            selectedHours = h;
-            selectedMinutes = m;
-            selH.value = h;
-            selM.value = m;
-            highlightActivePreset();
-            if (typeof onTimeChanged === 'function') {
-                onTimeChanged(getSelectedTime());
+        const presetsWrap = document.createElement('div');
+        presetsWrap.className = 'time-presets-wrap';
+
+        const presets = [
+            { label: '09:00', h: 9, m: 0 },
+            { label: '12:00', h: 12, m: 0 },
+            { label: '18:00', h: 18, m: 0 },
+            { label: '23:59', h: 23, m: 59 }
+        ];
+
+        presets.forEach(p => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'time-preset-pill';
+            btn.textContent = p.label;
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.setTime(p.h, p.m);
+            });
+            presetsWrap.appendChild(btn);
+        });
+
+        header.appendChild(label);
+        header.appendChild(presetsWrap);
+        wrapper.appendChild(header);
+
+        // Interactive Stepper Row
+        const steppersRow = document.createElement('div');
+        steppersRow.className = 'time-steppers-row';
+
+        // Hours Column
+        const hourCol = this.createStepperCol({
+            label: 'Hours',
+            value: this.hours,
+            max: 23,
+            step: 1,
+            onStep: (newVal) => {
+                this.hours = newVal;
+                this.notify();
             }
         });
-    });
-}
 
-function updateInputs() {
-    const selH = document.getElementById('timeSelectHour');
-    const selM = document.getElementById('timeSelectMinute');
-    if (selH) selH.value = selectedHours;
-    if (selM) selM.value = selectedMinutes;
-    highlightActivePreset();
-}
+        const colon = document.createElement('div');
+        colon.className = 'time-colon-separator';
+        colon.textContent = ':';
 
-function highlightActivePreset() {
-    document.querySelectorAll('.time-chip').forEach(chip => {
-        const h = parseInt(chip.dataset.h, 10);
-        const m = parseInt(chip.dataset.m, 10);
-        chip.classList.toggle('active', h === selectedHours && m === selectedMinutes);
-    });
+        // Minutes Column
+        const minCol = this.createStepperCol({
+            label: 'Minutes',
+            value: this.minutes,
+            max: 59,
+            step: 5,
+            onStep: (newVal) => {
+                this.minutes = newVal;
+                this.notify();
+            }
+        });
+
+        steppersRow.appendChild(hourCol);
+        steppersRow.appendChild(colon);
+        steppersRow.appendChild(minCol);
+        wrapper.appendChild(steppersRow);
+
+        this.container.appendChild(wrapper);
+    }
+
+    createStepperCol({ label, value, max, step, onStep }) {
+        const col = document.createElement('div');
+        col.className = 'time-stepper-col';
+
+        const btnUp = document.createElement('button');
+        btnUp.type = 'button';
+        btnUp.className = 'time-step-btn';
+        btnUp.innerHTML = '&#9650;';
+        btnUp.title = `Increase ${label}`;
+        btnUp.addEventListener('click', (e) => {
+            e.preventDefault();
+            let current = parseInt(valDisplay.textContent, 10) || 0;
+            current = (current + step) % (max + 1);
+            valDisplay.textContent = String(current).padStart(2, '0');
+            onStep(current);
+        });
+
+        const valDisplay = document.createElement('div');
+        valDisplay.className = 'time-val-display';
+        valDisplay.textContent = String(value).padStart(2, '0');
+
+        const btnDown = document.createElement('button');
+        btnDown.type = 'button';
+        btnDown.className = 'time-step-btn';
+        btnDown.innerHTML = '&#9660;';
+        btnDown.title = `Decrease ${label}`;
+        btnDown.addEventListener('click', (e) => {
+            e.preventDefault();
+            let current = parseInt(valDisplay.textContent, 10) || 0;
+            current = (current - step + (max + 1)) % (max + 1);
+            valDisplay.textContent = String(current).padStart(2, '0');
+            onStep(current);
+        });
+
+        col.appendChild(btnUp);
+        col.appendChild(valDisplay);
+        col.appendChild(btnDown);
+
+        return col;
+    }
+
+    setTime(hours, minutes, triggerChange = true) {
+        this.hours = Math.max(0, Math.min(23, parseInt(hours, 10) || 0));
+        this.minutes = Math.max(0, Math.min(59, parseInt(minutes, 10) || 0));
+        this.render();
+        if (triggerChange) {
+            this.notify();
+        }
+    }
+
+    getTime() {
+        return {
+            hours: this.hours,
+            minutes: this.minutes,
+            timeStr: `${String(this.hours).padStart(2, '0')}:${String(this.minutes).padStart(2, '0')}`
+        };
+    }
+
+    notify() {
+        if (typeof this.onChange === 'function') {
+            this.onChange(this.getTime());
+        }
+    }
 }

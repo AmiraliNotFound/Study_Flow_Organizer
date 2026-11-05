@@ -1,34 +1,126 @@
 /* ==========================================================================
-   DESIGN SYSTEM & THEME VARIABLES (Dark Blue Theme & Glassmorphism)
+   DESIGN SYSTEM & COLOR THEME VARIABLES
+   Strict 5-Color Master Palette:
+     1. #283D3B - Dark Slate Grey
+     2. #197278 - Stormy Teal
+     3. #EDDDD4 - Powder Petal
+     4. #C44536 - Tomato Jam
+     5. #772E25 - Chestnut
    ========================================================================== */
-:root {
-    --bg-navy: #0A2540;
-    --bg-navy-deep: #061628;
-    --card-slate: #103358;
-    --card-slate-glass: rgba(16, 51, 88, 0.72);
-    --card-slate-border: rgba(255, 255, 255, 0.12);
-    --card-hover-border: rgba(48, 131, 205, 0.5);
-    
-    --blue-gradient-start: #20639B;
-    --blue-gradient-end: #3083CD;
-    --blue-accent-cyan: #00d2d3;
-    --blue-glow: rgba(48, 131, 205, 0.35);
-    
-    --urgent-amber: #F59E0B;
-    --urgent-red: #EF4444;
-    --urgent-glow: rgba(239, 68, 68, 0.6);
-    --success-emerald: #10B981;
-    
-    --text-primary: #F8FAFC;
-    --text-secondary: #CBD5E1;
-    --text-muted: #94A3B8;
-    --text-subtle: #64748B;
 
+:root {
+    /* --- Master Color Swatches --- */
+    --palette-dark-slate: #283D3B;
+    --palette-stormy-teal: #197278;
+    --palette-powder-petal: #EDDDD4;
+    --palette-tomato-jam: #C44536;
+    --palette-chestnut: #772E25;
+
+    /* --- Backgrounds & Canvas (Glassmorphic Default) --- */
+    --bg-canvas: #1e2e2c;
+    --bg-canvas-deep: #162221;
+    --card-surface: #283D3B;
+    --card-surface-glass: rgba(40, 61, 59, 0.78);
+    --card-surface-hover: rgba(46, 70, 68, 0.92);
+    --card-border: rgba(237, 221, 212, 0.14);
+    --card-border-hover: rgba(25, 114, 120, 0.65);
+
+    /* --- Primary Interactive (Stormy Teal) --- */
+    --color-primary: #197278;
+    --color-primary-light: #228b93;
+    --color-primary-dark: #12555a;
+    --color-primary-glow: rgba(25, 114, 120, 0.40);
+    --color-primary-subtle: rgba(25, 114, 120, 0.16);
+
+    /* --- Typography & Light Surfaces (Powder Petal) --- */
+    --text-primary: #EDDDD4;
+    --text-secondary: rgba(237, 221, 212, 0.78);
+    --text-muted: rgba(237, 221, 212, 0.52);
+    --text-subtle: rgba(237, 221, 212, 0.32);
+
+    /* --- Urgency / Alerts / Danger (Tomato Jam) --- */
+    --color-urgent: #C44536;
+    --color-urgent-light: #d65545;
+    --color-urgent-glow: rgba(196, 69, 54, 0.45);
+    --color-urgent-subtle: rgba(196, 69, 54, 0.18);
+
+    /* --- Warm Secondary & Borders (Chestnut) --- */
+    --color-chestnut: #772E25;
+    --color-chestnut-glow: rgba(119, 46, 37, 0.35);
+    --color-chestnut-subtle: rgba(119, 46, 37, 0.20);
+
+    /* --- Success & In Progress (Harmonized with Stormy Teal) --- */
+    --color-success: #2dd4bf;
+    --color-success-subtle: rgba(45, 212, 191, 0.16);
+
+    /* --- Geometry & Radii --- */
     --radius-sm: 8px;
     --radius-md: 14px;
     --radius-lg: 20px;
     --radius-xl: 26px;
 
-    --transition-smooth: all 0.28s cubic-bezier(0.4, 0, 0.2, 1);
-    --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    /* --- Backward-Compatibility Aliases (Map to 5-Color Master Palette) --- */
+    --card-slate: var(--card-surface);
+    --card-slate-glass: var(--card-surface-glass);
+    --card-slate-border: var(--card-border);
+    --card-hover-border: var(--card-border-hover);
+    --blue-gradient-start: var(--palette-stormy-teal);
+    --blue-gradient-end: #228b93;
+    --blue-accent-cyan: #2dd4bf;
+    --blue-glow: var(--color-primary-glow);
+    --urgent-amber: var(--palette-chestnut);
+    --urgent-red: var(--palette-tomato-jam);
+    --urgent-glow: var(--color-urgent-glow);
+    --success-emerald: #2dd4bf;
+
+    /* --- Transitions & Typography --- */
+    --transition-smooth: all 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+    --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* ==========================================================================
+   FLAT THEME VARIANT (Clean, Minimal, Solid, Zero-Glass Blur)
+   ========================================================================== */
+body.theme-flat {
+    background-color: #1a2725 !important;
+    background-image: none !important;
+}
+
+body.theme-flat .app-header {
+    background: #233533 !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25) !important;
+    border: 1px solid rgba(237, 221, 212, 0.12) !important;
+}
+
+body.theme-flat .glass-panel,
+body.theme-flat .modal-window,
+body.theme-flat .card-item,
+body.theme-flat .subject-card,
+body.theme-flat .kanban-column,
+body.theme-flat .floating-dropdown-menu,
+body.theme-flat .custom-select-dropdown,
+body.theme-flat .month-calendar-wrapper {
+    background: #283D3B !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
+    border: 1px solid rgba(237, 221, 212, 0.12) !important;
+}
+
+body.theme-flat .btn-primary {
+    background: var(--palette-stormy-teal) !important;
+    box-shadow: none !important;
+    border: 1px solid rgba(237, 221, 212, 0.18) !important;
+}
+
+body.theme-flat .btn-primary:hover {
+    background: #20868d !important;
+    box-shadow: none !important;
+}
+
+body.theme-flat .btn-secondary {
+    background: #20312f !important;
+    border: 1px solid rgba(237, 221, 212, 0.12) !important;
 }
