@@ -237,6 +237,15 @@ async function handleRequest(req, res) {
         });
     }
 
+    // Graceful server shutdown
+    if (pathname === '/api/shutdown' && (req.method === 'POST' || req.method === 'GET')) {
+        sendJson(res, 200, { success: true, message: 'Server shutting down' });
+        setTimeout(() => {
+            server.close(() => process.exit(0));
+        }, 100);
+        return;
+    }
+
     // 2. GET /api/data: Load active data from standard AppData
     if (pathname === '/api/data' && req.method === 'GET') {
         try {

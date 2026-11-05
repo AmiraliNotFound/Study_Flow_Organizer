@@ -22,6 +22,11 @@ ehthumbs.db
 Desktop.ini
 $RECYCLE.BIN/
 
+# Build outputs & binaries
+dist/
+*.exe
+node_modules/
+
 # Editor & Agent directories
 .vscode/
 .idea/
