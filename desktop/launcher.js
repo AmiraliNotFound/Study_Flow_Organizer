@@ -118,7 +118,8 @@ async function main() {
 
         const browserProcess = spawn(browserExe, browserArgs, {
             stdio: 'ignore',
-            detached: false
+            detached: false,
+            windowsHide: true
         });
 
         browserProcess.on('exit', () => {
