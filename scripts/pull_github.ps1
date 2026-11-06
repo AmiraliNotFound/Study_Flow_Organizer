@@ -1,7 +1,5 @@
 # ==============================================================================
 # STUDY FLOW ORGANIZER - AUTOMATED GIT PULL & DATA PRESERVATION DASHBOARD
-# Repository: https://github.com/sinasharifi-7462/Study_Flow_Organizer
-# Author: Sina Sharifi <Sinasharifi7462@gmail.com>
 # ==============================================================================
 
 $repoDir = Split-Path $PSScriptRoot -Parent
@@ -18,8 +16,13 @@ $dataFile = Join-Path $dataDir "study_flow_data.json"
 $userPreserveFile = Join-Path $dataDir "study_flow_data.user.json"
 $personalFile = Join-Path $dataDir "study_flow_data.personal.json"
 
+function Get-RemoteUrl {
+    $remote = git remote get-url origin 2>$null
+    if (-not $remote) { return "origin not configured" }
+    return $remote
+}
+
 function Get-BestUserDataFile {
-    # Check dataFile first if it has active subjects
     if (Test-Path $dataFile) {
         try {
             $obj = Get-Content $dataFile -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -28,7 +31,6 @@ function Get-BestUserDataFile {
             }
         } catch {}
     }
-    # Check personalFile
     if (Test-Path $personalFile) {
         try {
             $obj = Get-Content $personalFile -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -37,7 +39,6 @@ function Get-BestUserDataFile {
             }
         } catch {}
     }
-    # Check userPreserveFile
     if (Test-Path $userPreserveFile) {
         try {
             $obj = Get-Content $userPreserveFile -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -47,7 +48,6 @@ function Get-BestUserDataFile {
         } catch {}
     }
     if (Test-Path $dataFile) { return $dataFile }
-    if (Test-Path $personalFile) { return $personalFile }
     return $null
 }
 
@@ -56,10 +56,9 @@ function Show-Header {
     Write-Host "======================================================================" -ForegroundColor Cyan
     Write-Host "         STUDY FLOW ORGANIZER - GIT PULL & DATA PRESERVATION         " -ForegroundColor Green
     Write-Host "======================================================================" -ForegroundColor Cyan
-    Write-Host " Repository: https://github.com/sinasharifi-7462/Study_Flow_Organizer" -ForegroundColor Gray
+    Write-Host " Repository: $(Get-RemoteUrl)" -ForegroundColor Gray
     Write-Host " Local Path: $repoDir" -ForegroundColor Gray
     
-    # Check user data subjects count
     $bestSrc = Get-BestUserDataFile
     $activeCount = 0
     $subjNames = @()
@@ -89,9 +88,6 @@ function Backup-UserData {
     if ($srcToSave -and (Test-Path $srcToSave)) {
         Copy-Item -Path $srcToSave -Destination $backupFile -Force
         Copy-Item -Path $srcToSave -Destination $userPreserveFile -Force
-        if (-not (Test-Path $personalFile) -or ((Get-Item $personalFile).Length -lt 200)) {
-            Copy-Item -Path $srcToSave -Destination $personalFile -Force
-        }
         Write-Host "[1/4] Safe Snapshot: Backed up user data to data/backups/" -ForegroundColor Green
         return $backupFile
     }
@@ -101,10 +97,8 @@ function Backup-UserData {
 function Execute-SafePull {
     Write-Host "`nInitiating Safe Pull with Zero Data Loss Protection..." -ForegroundColor Cyan
 
-    # Step 1: Create local snapshot
     $backupPath = Backup-UserData
 
-    # In-memory preservation of current user subjects & items
     $savedSubjects = @()
     $savedItems = @()
     $savedMaterials = @()
@@ -121,44 +115,34 @@ function Execute-SafePull {
         } catch {}
     }
 
-    # Step 2: Handle local changes to prevent Git pull abort
-    Write-Host "[2/4] Checking working tree and staging..." -ForegroundColor Yellow
+    Write-Host "[2/4] Checking working tree..." -ForegroundColor Yellow
     $diffStatus = git status --porcelain
-
-    # Reset tracked template file if locally modified so pull applies cleanly
-    if (Test-Path $dataFile) {
-        $null = git checkout -- $dataFile 2>&1
-    }
 
     if ($diffStatus) {
         $null = git stash save "Auto-stash before pull $(Get-Date)" 2>&1
     }
 
-    # Step 3: Pull latest contributions from remote
-    Write-Host "[3/4] Pulling contributions from origin main..." -ForegroundColor Yellow
-    $pullOutput = git pull origin main 2>&1 | Out-String
+    $currentBranch = (git branch --show-current 2>$null)
+    if (!$currentBranch) { $currentBranch = "main" }
+
+    Write-Host "[3/4] Pulling updates from origin $currentBranch..." -ForegroundColor Yellow
+    $pullOutput = git pull origin $currentBranch 2>&1 | Out-String
 
     if ($LASTEXITCODE -ne 0) {
         Write-Host "`nWarning: Git pull reported an error:" -ForegroundColor Red
         Write-Host $pullOutput -ForegroundColor DarkRed
-        # Restore user data immediately
-        if ($sourceForPreserve -and (Test-Path $sourceForPreserve)) {
-            Copy-Item -Path $sourceForPreserve -Destination $dataFile -Force
-        }
         Read-Host -Prompt "Press Enter to return"
         return
     }
 
     Write-Host $pullOutput -ForegroundColor Gray
 
-    # Step 4: Smart Restore & Merge of User's Previous Information
-    Write-Host "[4/4] Preserving & Restoring your previous information..." -ForegroundColor Green
+    Write-Host "[4/4] Merging previous subjects and schedule..." -ForegroundColor Green
     
     if (Test-Path $dataFile) {
         try {
             $remoteData = Get-Content $dataFile -Raw -Encoding UTF8 | ConvertFrom-Json
 
-            # Merge: Keep new types/config from contributors, restore user's own subjects/items
             if ($savedSubjects.Count -gt 0) {
                 $remoteData.subjects = $savedSubjects
                 $remoteData.items = $savedItems
@@ -180,15 +164,15 @@ function Execute-SafePull {
         }
     }
 
-    # Restore any stashed local modifications
-    $null = git stash pop 2>&1
+    if ($diffStatus) {
+        $null = git stash pop 2>&1
+    }
 
     Write-Host ""
     Write-Host "======================================================================" -ForegroundColor Cyan
-    Write-Host "                PULL & RESTORATION COMPLETED SUCCESSFULLY!            " -ForegroundColor Green
+    Write-Host "                PULL & MERGE COMPLETED SUCCESSFULLY!                  " -ForegroundColor Green
     Write-Host "======================================================================" -ForegroundColor Cyan
     
-    # Display latest commit info
     $latestCommit = git log -1 --pretty=format:"Latest Commit: %h - %s (%an, %ar)"
     Write-Host $latestCommit -ForegroundColor Magenta
     if ($backupPath) {
@@ -196,14 +180,7 @@ function Execute-SafePull {
     }
     Write-Host "======================================================================" -ForegroundColor Cyan
     Write-Host ""
-
-    $openApp = Read-Host -Prompt "Would you like to launch Study Flow Organizer now? [Y/N]"
-    if ($openApp -match '^[Yy]') {
-        $htmlPath = Join-Path $repoDir "app\index.html"
-        if (Test-Path $htmlPath) {
-            Start-Process -FilePath $htmlPath
-        }
-    }
+    Read-Host -Prompt "Press Enter to return to menu"
 }
 
 # Menu
@@ -220,9 +197,7 @@ while ($true) {
     $choice = Read-Host -Prompt "Enter option [1-6]"
 
     switch ($choice) {
-        "1" {
-            Execute-SafePull
-        }
+        "1" { Execute-SafePull }
         "2" {
             Write-Host "`n--- Recent Repository Commits ---" -ForegroundColor Cyan
             git log -5 --graph --pretty=format:"%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset" --abbrev-commit

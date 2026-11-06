@@ -1,0 +1,23 @@
+{
+  "name": "study-flow-organizer",
+  "version": "4.1.0",
+  "description": "Smart Academic Schedule, Folders Hub & Task Organizer",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "node desktop/launcher.js",
+    "server": "node server/server.js",
+    "build:exe": "node scripts/build_standalone_exe.js",
+    "build:launcher": "gcc -mwindows -O2 scripts/launcher.c -o Study_Flow_Organizer.exe"
+  },
+  "keywords": [
+    "academic",
+    "organizer",
+    "planner",
+    "kanban",
+    "shamsi",
+    "jalali",
+    "desktop-app"
+  ],
+  "author": "Amirali Navidi",
+  "license": "MIT"
+}
