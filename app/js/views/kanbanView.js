@@ -80,9 +80,10 @@ export function renderKanbanView(container) {
     const boardWrap = document.createElement('div');
     boardWrap.className = 'kanban-board-wrapper';
 
-    columns.forEach(col => {
+    columns.forEach((col, colIndex) => {
         const colEl = document.createElement('div');
-        colEl.className = 'kanban-column';
+        colEl.className = 'kanban-column view-flow-in';
+        colEl.style.animationDelay = `${colIndex * 0.05}s`;
         colEl.dataset.columnId = col.id;
 
         // Header
@@ -142,7 +143,7 @@ export function renderKanbanView(container) {
         if (col.items.length === 0) {
             cardsList.innerHTML = `<div class="kanban-empty-slot">Drop cards here</div>`;
         } else {
-            col.items.forEach(item => {
+            col.items.forEach((item, cardIndex) => {
                 const subj = AppState.subjects.find(s => s.id === item.subjectId) || { title: "Subject", gradientIndex: 0 };
                 const gradient = SUBJECT_GRADIENTS[subj.gradientIndex || 0] || SUBJECT_GRADIENTS[0];
                 const dueDate = new Date(item.dueDate);
@@ -151,7 +152,8 @@ export function renderKanbanView(container) {
                 const isTask = item.kind === 'task';
 
                 const card = document.createElement('div');
-                card.className = `kanban-card ${item.completed ? 'is-completed' : ''} ${!item.completed && remaining.isUrgent ? 'is-urgent' : ''}`;
+                card.className = `kanban-card view-flow-in ${item.completed ? 'is-completed' : ''} ${!item.completed && remaining.isUrgent ? 'is-urgent' : ''}`;
+                card.style.animationDelay = `${colIndex * 0.05 + cardIndex * 0.03}s`;
                 card.draggable = true;
                 card.dataset.itemId = item.id;
 

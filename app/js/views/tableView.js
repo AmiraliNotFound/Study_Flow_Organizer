@@ -2,7 +2,7 @@
  * Courses & Schedule Matrix (Table View) Renderer
  */
 
-import { AppState, SUBJECT_GRADIENTS, getFilteredItems, toggleItemComplete, deleteItem } from '../state.js';
+import { AppState, SUBJECT_GRADIENTS, getFilteredItems, doesSubjectMatchQuery, toggleItemComplete, deleteItem } from '../state.js';
 import { formatDate, calculateRemainingTime, sortItemsChronologically, escapeHtml } from '../dateUtils.js';
 import { formatDualDate } from '../jalali.js';
 import { openItemModal } from '../modals/itemModal.js';
@@ -15,6 +15,8 @@ export function renderTableView(container) {
     container.innerHTML = "";
 
     const filteredItems = getFilteredItems();
+    const query = (AppState.searchQuery || '').trim();
+    const hasSearch = Boolean(query);
 
     if (AppState.subjects.length === 0) {
         container.innerHTML = `
@@ -31,6 +33,16 @@ export function renderTableView(container) {
         return;
     }
 
+    // Filter visible subjects for matrix search
+    let visibleSubjects = AppState.subjects;
+    if (hasSearch) {
+        visibleSubjects = AppState.subjects.filter(subj => {
+            const hasMatchingItems = filteredItems.some(i => i.subjectId === subj.id);
+            const matchesCourse = doesSubjectMatchQuery(subj, query);
+            return hasMatchingItems || matchesCourse;
+        });
+    }
+
     // Header strip
     const headerStrip = document.createElement('div');
     headerStrip.className = 'subjects-table-header';
@@ -38,7 +50,7 @@ export function renderTableView(container) {
         <div style="display: flex; align-items: center; gap: 8px;">
             <h2>📑 Courses & Schedule Matrix</h2>
             <span class="badge" style="background: rgba(25, 114, 120, 0.18); color: var(--palette-stormy-teal); font-size: 0.76rem; padding: 2px 8px; border-radius: 10px;">
-                ${AppState.subjects.length} Subjects
+                ${visibleSubjects.length} of ${AppState.subjects.length} Subjects
             </span>
         </div>
         <div style="display: flex; gap: 8px;">
@@ -50,11 +62,35 @@ export function renderTableView(container) {
     headerStrip.querySelector('.btn-table-new-subj').addEventListener('click', () => openSubjectModal());
     container.appendChild(headerStrip);
 
+    if (visibleSubjects.length === 0 && hasSearch) {
+        const emptyBox = document.createElement('div');
+        emptyBox.innerHTML = `
+            <div class="empty-workspace-banner view-flow-in" style="margin-top: 16px;">
+                <div class="empty-icon-circle">🔍</div>
+                <h3>No matrix matches found</h3>
+                <p>No courses or items matched "<strong>${escapeHtml(query)}</strong>"</p>
+                <button type="button" class="btn btn-secondary" id="btnTableClearSearch" style="margin-top: 10px;">
+                    Clear Search
+                </button>
+            </div>
+        `;
+        emptyBox.querySelector('#btnTableClearSearch')?.addEventListener('click', () => {
+            AppState.searchQuery = '';
+            const searchInput = document.getElementById('globalSearchInput');
+            if (searchInput) searchInput.value = '';
+            const clearBtn = document.getElementById('clearSearchBtn');
+            if (clearBtn) clearBtn.style.display = 'none';
+            renderTableView(container);
+        });
+        container.appendChild(emptyBox);
+        return;
+    }
+
     // List container
     const listWrap = document.createElement('div');
     listWrap.className = 'subject-table-list';
 
-    AppState.subjects.forEach(subj => {
+    visibleSubjects.forEach((subj, index) => {
         const gradient = SUBJECT_GRADIENTS[subj.gradientIndex || 0] || SUBJECT_GRADIENTS[0];
         const subjItems = AppState.items.filter(i => i.subjectId === subj.id);
         const subjFilteredItems = sortItemsChronologically(filteredItems.filter(i => i.subjectId === subj.id));
@@ -86,10 +122,12 @@ export function renderTableView(container) {
             `;
         }
 
-        const isExpanded = AppState.expandedTableSubjectIds.has(subj.id);
+        // Auto-expand accordion when searching
+        const isExpanded = hasSearch || AppState.expandedTableSubjectIds.has(subj.id);
 
         const card = document.createElement('div');
-        card.className = 'subject-table-card';
+        card.className = 'subject-table-card view-flow-in';
+        card.style.animationDelay = `${index * 0.045}s`;
 
         // Summary row
         const summary = document.createElement('div');

@@ -367,6 +367,226 @@ if ($dialog.ShowDialog($topForm) -eq [System.Windows.Forms.DialogResult]::OK) {
         }
     }
 
+    // 7. POST /api/ai/models: Retrieve available models from AI Provider (Gemini / OpenAI / Custom)
+    if (pathname === '/api/ai/models' && req.method === 'POST') {
+        try {
+            const body = await parseJsonBody(req);
+            const provider = body.provider || 'gemini';
+            const apiKey = (body.apiKey || '').trim();
+            const baseUrl = (body.baseUrl || '').trim();
+
+            if (!apiKey) {
+                return sendJson(res, 400, { success: false, error: 'API key is required' });
+            }
+
+            if (provider === 'gemini') {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}`;
+                const apiRes = await fetch(url);
+                if (!apiRes.ok) {
+                    const errJson = await apiRes.json().catch(() => ({}));
+                    const msg = errJson.error?.message || `Google Gemini API returned status ${apiRes.status}`;
+                    return sendJson(res, apiRes.status, { success: false, error: msg });
+                }
+                const data = await apiRes.json();
+                const rawModels = Array.isArray(data.models) ? data.models : [];
+                // Filter models that support generateContent
+                const models = rawModels
+                    .filter(m => Array.isArray(m.supportedGenerationMethods) && m.supportedGenerationMethods.includes('generateContent'))
+                    .map(m => {
+                        const cleanId = m.name.replace(/^models\//, '');
+                        return {
+                            id: cleanId,
+                            rawId: m.name,
+                            displayName: m.displayName || cleanId,
+                            description: m.description || ''
+                        };
+                    });
+                return sendJson(res, 200, { success: true, provider: 'gemini', models });
+            } else {
+                // OpenAI / Custom / OpenRouter
+                const endpoint = (baseUrl || 'https://api.openai.com/v1').replace(/\/+$/, '');
+                const url = `${endpoint}/models`;
+                const apiRes = await fetch(url, {
+                    headers: {
+                        'Authorization': `Bearer ${apiKey}`
+                    }
+                });
+                if (!apiRes.ok) {
+                    const errJson = await apiRes.json().catch(() => ({}));
+                    const msg = errJson.error?.message || `AI API returned status ${apiRes.status}`;
+                    return sendJson(res, apiRes.status, { success: false, error: msg });
+                }
+                const data = await apiRes.json();
+                const rawModels = Array.isArray(data.data) ? data.data : (Array.isArray(data.models) ? data.models : []);
+                const models = rawModels.map(m => {
+                    const modelId = m.id || m.name;
+                    return {
+                        id: modelId,
+                        displayName: modelId,
+                        description: m.owned_by ? `By ${m.owned_by}` : ''
+                    };
+                });
+                return sendJson(res, 200, { success: true, provider, models });
+            }
+        } catch (err) {
+            console.error('[AI Models Error]', err);
+            return sendJson(res, 500, { success: false, error: err.message });
+        }
+    }
+
+    // 8. POST /api/ai/generate: Process prompts and generate structured actions
+    if (pathname === '/api/ai/generate' && req.method === 'POST') {
+        try {
+            const body = await parseJsonBody(req);
+            const provider = body.provider || 'gemini';
+            const apiKey = (body.apiKey || '').trim();
+            const baseUrl = (body.baseUrl || '').trim();
+            const model = (body.model || '').trim();
+            const prompt = (body.prompt || '').trim();
+            const audioData = body.audioData || null; // base64 encoded audio
+            const audioMimeType = body.audioMimeType || 'audio/webm';
+            const systemPrompt = body.systemPrompt || '';
+            const temperature = typeof body.temperature === 'number' ? body.temperature : 0.1;
+
+            if (!apiKey) {
+                return sendJson(res, 400, { success: false, error: 'API key is required' });
+            }
+            if (!model) {
+                return sendJson(res, 400, { success: false, error: 'Model name is required' });
+            }
+            if (!prompt && !audioData) {
+                return sendJson(res, 400, { success: false, error: 'Either a text prompt or voice audio is required' });
+            }
+
+            if (provider === 'gemini') {
+                const modelIdentifier = model.startsWith('models/') ? model : `models/${model}`;
+                const url = `https://generativelanguage.googleapis.com/v1beta/${modelIdentifier}:generateContent?key=${encodeURIComponent(apiKey)}`;
+
+                // Build parts for multimodal input (audio + text)
+                const parts = [];
+
+                if (audioData) {
+                    parts.push({
+                        inlineData: {
+                            mimeType: audioMimeType,
+                            data: audioData
+                        }
+                    });
+                }
+
+                if (prompt) {
+                    parts.push({ text: prompt });
+                } else if (audioData) {
+                    parts.push({
+                        text: 'Listen carefully to this audio recording and extract all schedule actions in English strictly adhering to the system instructions.'
+                    });
+                }
+
+                const payload = {
+                    contents: [
+                        {
+                            role: 'user',
+                            parts
+                        }
+                    ],
+                    generationConfig: {
+                        responseMimeType: 'application/json',
+                        temperature
+                    }
+                };
+
+                if (systemPrompt) {
+                    payload.systemInstruction = {
+                        parts: [{ text: systemPrompt }]
+                    };
+                }
+
+                const apiRes = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!apiRes.ok) {
+                    const errJson = await apiRes.json().catch(() => ({}));
+                    const msg = errJson.error?.message || `Google Gemini API returned status ${apiRes.status}`;
+                    return sendJson(res, apiRes.status, { success: false, error: msg });
+                }
+
+                const data = await apiRes.json();
+                const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+                let parsedData = null;
+                try {
+                    const cleanJson = textResponse.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
+                    parsedData = JSON.parse(cleanJson);
+                } catch (parseErr) {
+                    console.warn('[AI Server] Could not parse Gemini response as JSON:', parseErr.message);
+                }
+
+                return sendJson(res, 200, {
+                    success: true,
+                    rawText: textResponse,
+                    data: parsedData
+                });
+            } else {
+                // OpenAI / Custom / OpenRouter
+                const endpoint = (baseUrl || 'https://api.openai.com/v1').replace(/\/+$/, '');
+                const url = `${endpoint}/chat/completions`;
+
+                const messages = [];
+                if (systemPrompt) {
+                    messages.push({ role: 'system', content: systemPrompt });
+                }
+
+                const userContent = prompt || (audioData ? 'Extract academic schedule actions from the provided audio instruction.' : '');
+                messages.push({ role: 'user', content: userContent });
+
+                const payload = {
+                    model,
+                    messages,
+                    response_format: { type: 'json_object' },
+                    temperature
+                };
+
+                const apiRes = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!apiRes.ok) {
+                    const errJson = await apiRes.json().catch(() => ({}));
+                    const msg = errJson.error?.message || `AI API returned status ${apiRes.status}`;
+                    return sendJson(res, apiRes.status, { success: false, error: msg });
+                }
+
+                const data = await apiRes.json();
+                const textResponse = data.choices?.[0]?.message?.content || '';
+
+                let parsedData = null;
+                try {
+                    const cleanJson = textResponse.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
+                    parsedData = JSON.parse(cleanJson);
+                } catch (parseErr) {
+                    console.warn('[AI Server] Could not parse OpenAI response as JSON:', parseErr.message);
+                }
+
+                return sendJson(res, 200, {
+                    success: true,
+                    rawText: textResponse,
+                    data: parsedData
+                });
+            }
+        } catch (err) {
+            console.error('[AI Generate Error]', err);
+            return sendJson(res, 500, { success: false, error: err.message });
+        }
+    }
+
     // --- STATIC ASSET SERVING ---
     let safePath = path.normalize(pathname).replace(/^(\.\.[\/\\])+/, '');
     if (safePath === '/' || safePath === '\\') safePath = '/index.html';

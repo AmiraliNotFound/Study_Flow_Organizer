@@ -46,6 +46,7 @@ export function renderTimelineView(container) {
     // "NOW" anchor
     const nowAnchor = document.createElement('div');
     nowAnchor.className = 'timeline-now-anchor';
+    nowAnchor.style.animationDelay = '0.02s';
     const nowFormatted = formatDate(new Date());
     nowAnchor.innerHTML = `
         <div class="timeline-now-dot">⏳</div>
@@ -63,15 +64,16 @@ export function renderTimelineView(container) {
         const diffMs = itemDate.getTime() - prevDate.getTime();
         const diffDays = Math.max(0, Math.round(diffMs / (1000 * 60 * 60 * 24)));
 
-        // Proportional gap spacer
-        const gapHeight = Math.min(120, Math.max(16, diffDays * 12));
+        // Proportional gap spacer with comfortable minimum clearance
+        const gapHeight = Math.min(100, Math.max(34, diffDays * 9));
         const gapSpacer = document.createElement('div');
         gapSpacer.className = 'timeline-gap-spacer';
         gapSpacer.style.height = `${gapHeight}px`;
+        gapSpacer.style.animationDelay = `${0.04 + index * 0.05}s`;
 
         let gapText = diffDays === 0 ? "Same day" : (diffDays === 1 ? "Next day (+1d)" : `Gap: ${diffDays} days`);
         if (index === 0 && diffMs > 0) {
-            gapText = `First deadline in ${diffDays} days`;
+            gapText = diffDays === 1 ? "First deadline in 1 day" : `First deadline in ${diffDays} days`;
         }
 
         gapSpacer.innerHTML = `<span class="timeline-gap-indicator">⏳ ${gapText}</span>`;
@@ -87,6 +89,7 @@ export function renderTimelineView(container) {
 
         const node = document.createElement('div');
         node.className = `timeline-node ${item.completed ? 'is-completed' : ''} ${!item.completed && remaining.isUrgent ? 'is-urgent' : ''}`;
+        node.style.animationDelay = `${0.07 + index * 0.05}s`;
         node.innerHTML = `
             <div class="timeline-node-dot"></div>
             <div class="timeline-node-card">

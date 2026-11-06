@@ -3,6 +3,7 @@
  */
 
 import { saveData } from './api.js';
+import { formatDualDate } from './jalali.js';
 
 export const SUBJECT_GRADIENTS = [
     { name: "Stormy Teal", css: "linear-gradient(135deg, #1d2d2c 0%, #197278 100%)", primary: "#197278" },
@@ -180,22 +181,35 @@ export async function persistCurrentState() {
 // --- CRUD Actions ---
 
 export async function addOrUpdateSubject(subjData) {
+    let finalSubj = null;
     if (subjData.id) {
         const idx = AppState.subjects.findIndex(s => s.id === subjData.id);
         if (idx !== -1) {
             AppState.subjects[idx] = { ...AppState.subjects[idx], ...subjData };
+            finalSubj = AppState.subjects[idx];
+        } else {
+            finalSubj = {
+                title: subjData.title,
+                code: subjData.code || "",
+                gradientIndex: typeof subjData.gradientIndex === 'number' ? subjData.gradientIndex : 0,
+                createdAt: subjData.createdAt || new Date().toISOString(),
+                ...subjData
+            };
+            AppState.subjects.push(finalSubj);
         }
     } else {
-        const newSubj = {
+        finalSubj = {
             id: `subj_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
             title: subjData.title,
             code: subjData.code || "",
             gradientIndex: typeof subjData.gradientIndex === 'number' ? subjData.gradientIndex : 0,
-            createdAt: new Date().toISOString()
+            createdAt: new Date().toISOString(),
+            ...subjData
         };
-        AppState.subjects.push(newSubj);
+        AppState.subjects.push(finalSubj);
     }
     await persistCurrentState();
+    return finalSubj;
 }
 
 export async function deleteSubject(subjectId) {
@@ -206,21 +220,31 @@ export async function deleteSubject(subjectId) {
 }
 
 export async function addOrUpdateItem(itemData) {
+    let finalItem = null;
     if (itemData.id) {
         const idx = AppState.items.findIndex(i => i.id === itemData.id);
         if (idx !== -1) {
             AppState.items[idx] = { ...AppState.items[idx], ...itemData };
+            finalItem = AppState.items[idx];
+        } else {
+            finalItem = {
+                completed: false,
+                createdAt: itemData.createdAt || new Date().toISOString(),
+                ...itemData
+            };
+            AppState.items.push(finalItem);
         }
     } else {
-        const newItem = {
+        finalItem = {
             id: `item_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
             completed: false,
             createdAt: new Date().toISOString(),
             ...itemData
         };
-        AppState.items.push(newItem);
+        AppState.items.push(finalItem);
     }
     await persistCurrentState();
+    return finalItem;
 }
 
 export async function toggleItemComplete(itemId) {
@@ -240,13 +264,24 @@ export async function deleteItem(itemId) {
 }
 
 export async function addOrUpdateMaterial(matData) {
+    let finalMat = null;
     if (matData.id) {
         const idx = AppState.materials.findIndex(m => m.id === matData.id);
         if (idx !== -1) {
             AppState.materials[idx] = { ...AppState.materials[idx], ...matData };
+            finalMat = AppState.materials[idx];
+        } else {
+            finalMat = {
+                createdAt: matData.createdAt || new Date().toISOString(),
+                typeId: "mat_folder",
+                typeName: "Course Folder",
+                icon: "📁",
+                ...matData
+            };
+            AppState.materials.push(finalMat);
         }
     } else {
-        const newMat = {
+        finalMat = {
             id: `mat_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
             createdAt: new Date().toISOString(),
             typeId: "mat_folder",
@@ -254,9 +289,10 @@ export async function addOrUpdateMaterial(matData) {
             icon: "📁",
             ...matData
         };
-        AppState.materials.push(newMat);
+        AppState.materials.push(finalMat);
     }
     await persistCurrentState();
+    return finalMat;
 }
 
 export async function deleteMaterial(materialId) {
@@ -265,7 +301,20 @@ export async function deleteMaterial(materialId) {
 }
 
 /**
+ * Checks if a course subject matches a search query tokens
+ */
+export function doesSubjectMatchQuery(subj, query) {
+    if (!subj) return false;
+    if (!query || !query.trim()) return true;
+    const tokens = query.toLowerCase().trim().split(/\s+/).filter(Boolean);
+    const corpus = `${subj.title || ''} ${subj.code || ''} ${subj.instructor || ''}`.toLowerCase();
+    return tokens.every(token => corpus.includes(token));
+}
+
+/**
  * Filter items according to search query and active filter pill.
+ * Features multi-token matching across item title, course title/code/instructor,
+ * type name, kind, notes, location, and formatted Gregorian + Shamsi dates.
  */
 export function getFilteredItems() {
     let result = [...AppState.items];
@@ -288,16 +337,41 @@ export function getFilteredItems() {
         });
     }
 
-    // Filter by search query
-    if (AppState.searchQuery.trim()) {
-        const q = AppState.searchQuery.toLowerCase().trim();
+    // Filter by search query (multi-token search)
+    const rawQuery = (AppState.searchQuery || '').trim();
+    if (rawQuery) {
+        const tokens = rawQuery.toLowerCase().split(/\s+/).filter(Boolean);
+
         result = result.filter(item => {
             const subj = AppState.subjects.find(s => s.id === item.subjectId);
-            const subjText = subj ? `${subj.title} ${subj.code}`.toLowerCase() : '';
-            const titleText = (item.title || '').toLowerCase();
-            const notesText = (item.extraInfo?.notes || '').toLowerCase();
-            const locText = (item.extraInfo?.location || '').toLowerCase();
-            return titleText.includes(q) || subjText.includes(q) || notesText.includes(q) || locText.includes(q);
+            const courseTitle = subj ? subj.title : '';
+            const courseCode = subj ? (subj.code || '') : '';
+            const instructor = subj ? (subj.instructor || '') : '';
+
+            let dateInfo = '';
+            if (item.dueDate) {
+                try {
+                    const d = new Date(item.dueDate);
+                    const dual = formatDualDate(d);
+                    dateInfo = `${d.getFullYear()} ${d.getMonth() + 1} ${d.getDate()} ${dual ? `${dual.gregFull} ${dual.shamsiFull}` : ''}`;
+                } catch (_) {}
+            }
+
+            const corpus = [
+                item.title || '',
+                item.typeName || '',
+                item.typeIcon || '',
+                item.kind || '',
+                courseTitle,
+                courseCode,
+                instructor,
+                dateInfo,
+                item.extraInfo?.notes || '',
+                item.extraInfo?.location || ''
+            ].join(' ').toLowerCase();
+
+            // All tokens must be present in this item's corpus
+            return tokens.every(token => corpus.includes(token));
         });
     }
 

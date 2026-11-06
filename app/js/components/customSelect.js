@@ -4,12 +4,13 @@
  */
 
 export class CustomSelect {
-    constructor({ container, options = [], value = null, placeholder = 'Select an option...', onChange = null }) {
+    constructor({ container, options = [], value = null, placeholder = 'Select an option...', onChange = null, className = '' }) {
         this.container = typeof container === 'string' ? document.getElementById(container) : container;
         this.options = options;
         this.value = value;
         this.placeholder = placeholder;
         this.onChange = onChange;
+        this.className = className;
         this.isOpen = false;
 
         this.element = null;
@@ -30,7 +31,7 @@ export class CustomSelect {
 
         this.container.innerHTML = '';
         this.element = document.createElement('div');
-        this.element.className = 'custom-select';
+        this.element.className = `custom-select ${this.className || ''}`.trim();
 
         // Trigger button
         this.trigger = document.createElement('button');
@@ -205,12 +206,23 @@ export class CustomSelect {
         this.trigger.setAttribute('aria-expanded', 'true');
         this.isOpen = true;
 
+        if (this.element) {
+            const rect = this.element.getBoundingClientRect();
+            const spaceBelow = window.innerHeight - rect.bottom;
+            if (spaceBelow < 200 && rect.top > 200) {
+                this.dropdown.classList.add('position-above');
+            } else {
+                this.dropdown.classList.remove('position-above');
+            }
+        }
+
         document.addEventListener('click', this.handleDocumentClick);
     }
 
     close() {
         if (!this.isOpen) return;
         this.dropdown.classList.add('hidden');
+        this.dropdown.classList.remove('position-above');
         this.trigger.setAttribute('aria-expanded', 'false');
         this.isOpen = false;
         document.removeEventListener('click', this.handleDocumentClick);

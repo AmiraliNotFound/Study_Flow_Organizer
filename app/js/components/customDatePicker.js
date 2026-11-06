@@ -38,6 +38,7 @@ export class CustomDatePicker {
         btnPrev.title = 'Previous Month';
         btnPrev.addEventListener('click', (e) => {
             e.preventDefault();
+            e.stopPropagation();
             this.navigateMonth(-1);
         });
 
@@ -67,6 +68,7 @@ export class CustomDatePicker {
         btnNext.title = 'Next Month';
         btnNext.addEventListener('click', (e) => {
             e.preventDefault();
+            e.stopPropagation();
             this.navigateMonth(1);
         });
 
@@ -189,6 +191,7 @@ export class CustomDatePicker {
 
         cell.addEventListener('click', (e) => {
             e.preventDefault();
+            e.stopPropagation();
             this.selectDate(dateObj);
         });
 

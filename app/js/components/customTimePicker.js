@@ -45,6 +45,7 @@ export class CustomTimePicker {
             btn.textContent = p.label;
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
+                e.stopPropagation();
                 this.setTime(p.h, p.m);
             });
             presetsWrap.appendChild(btn);
@@ -105,6 +106,7 @@ export class CustomTimePicker {
         btnUp.title = `Increase ${label}`;
         btnUp.addEventListener('click', (e) => {
             e.preventDefault();
+            e.stopPropagation();
             let current = parseInt(valDisplay.textContent, 10) || 0;
             current = (current + step) % (max + 1);
             valDisplay.textContent = String(current).padStart(2, '0');
@@ -122,6 +124,7 @@ export class CustomTimePicker {
         btnDown.title = `Decrease ${label}`;
         btnDown.addEventListener('click', (e) => {
             e.preventDefault();
+            e.stopPropagation();
             let current = parseInt(valDisplay.textContent, 10) || 0;
             current = (current - step + (max + 1)) % (max + 1);
             valDisplay.textContent = String(current).padStart(2, '0');

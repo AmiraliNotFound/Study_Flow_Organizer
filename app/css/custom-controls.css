@@ -37,6 +37,27 @@
     box-shadow: 0 0 0 3px var(--color-primary-subtle);
 }
 
+/* Compact / Small custom dropdown variant */
+.custom-select-sm .custom-select-trigger,
+.custom-select.custom-select-sm .custom-select-trigger {
+    padding: 5px 10px;
+    font-size: 0.8rem;
+    min-height: 32px;
+}
+
+.custom-select-sm .custom-select-arrow,
+.custom-select.custom-select-sm .custom-select-arrow {
+    width: 14px;
+    height: 14px;
+}
+
+.custom-select-sm .custom-select-option,
+.custom-select.custom-select-sm .custom-select-option {
+    padding: 6px 10px;
+    font-size: 0.78rem;
+    gap: 6px;
+}
+
 .custom-select-trigger-content {
     display: flex;
     align-items: center;

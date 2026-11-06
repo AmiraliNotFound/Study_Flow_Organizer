@@ -2,7 +2,7 @@
  * Subjects Cards Grid View Renderer
  */
 
-import { AppState, SUBJECT_GRADIENTS, getFilteredItems, toggleItemComplete, deleteItem, deleteMaterial } from '../state.js';
+import { AppState, SUBJECT_GRADIENTS, getFilteredItems, doesSubjectMatchQuery, toggleItemComplete, deleteItem, deleteMaterial } from '../state.js';
 import { formatDate, calculateRemainingTime, sortItemsChronologically, escapeHtml } from '../dateUtils.js';
 import { openItemModal } from '../modals/itemModal.js';
 import { openSubjectModal } from '../modals/subjectModal.js';
@@ -14,6 +14,8 @@ export function renderCardsView(container) {
     container.innerHTML = "";
 
     const filteredItems = getFilteredItems();
+    const query = (AppState.searchQuery || '').trim();
+    const hasSearch = Boolean(query);
 
     if (AppState.subjects.length === 0) {
         container.innerHTML = `
@@ -39,7 +41,41 @@ export function renderCardsView(container) {
         return;
     }
 
-    AppState.subjects.forEach(subj => {
+    // Filter visible subjects when searching: show courses that match directly OR contain matching items
+    let visibleSubjects = AppState.subjects;
+    if (hasSearch) {
+        visibleSubjects = AppState.subjects.filter(subj => {
+            const hasMatchingItems = filteredItems.some(i => i.subjectId === subj.id);
+            const matchesCourse = doesSubjectMatchQuery(subj, query);
+            return hasMatchingItems || matchesCourse;
+        });
+    }
+
+    if (visibleSubjects.length === 0 && hasSearch) {
+        container.innerHTML = `
+            <div style="grid-column: 1 / -1;">
+                <div class="empty-workspace-banner view-flow-in">
+                    <div class="empty-icon-circle">🔍</div>
+                    <h3>No matching results</h3>
+                    <p>No courses, tasks, or events matched "<strong>${escapeHtml(query)}</strong>"</p>
+                    <button type="button" class="btn btn-secondary" id="btnCardsClearSearch" style="margin-top: 10px;">
+                        Clear Search
+                    </button>
+                </div>
+            </div>
+        `;
+        container.querySelector('#btnCardsClearSearch')?.addEventListener('click', () => {
+            AppState.searchQuery = '';
+            const searchInput = document.getElementById('globalSearchInput');
+            if (searchInput) searchInput.value = '';
+            const clearBtn = document.getElementById('clearSearchBtn');
+            if (clearBtn) clearBtn.style.display = 'none';
+            renderCardsView(container);
+        });
+        return;
+    }
+
+    visibleSubjects.forEach((subj, index) => {
         const gradient = SUBJECT_GRADIENTS[subj.gradientIndex || 0] || SUBJECT_GRADIENTS[0];
         const subjItems = AppState.items.filter(i => i.subjectId === subj.id);
         const subjFilteredItems = sortItemsChronologically(filteredItems.filter(i => i.subjectId === subj.id));
@@ -50,10 +86,12 @@ export function renderCardsView(container) {
         const progressPercent = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
 
         const currentTab = AppState.cardSubTabs[subj.id] || 'schedule';
-        const isDrawerExpanded = AppState.expandedGridSubjectTasks.has(subj.id);
+        // Auto-expand task drawer on matching cards so user immediately sees search results
+        const isDrawerExpanded = hasSearch || AppState.expandedGridSubjectTasks.has(subj.id);
 
         const card = document.createElement('div');
-        card.className = 'subject-card';
+        card.className = 'subject-card view-flow-in';
+        card.style.animationDelay = `${index * 0.045}s`;
 
         // Header Banner
         const banner = document.createElement('div');

@@ -17,6 +17,8 @@ import { openItemModal, initItemModalEvents } from './modals/itemModal.js';
 import { openSubjectModal, initSubjectModalEvents } from './modals/subjectModal.js';
 import { openFolderModal, initFolderModalEvents } from './modals/folderModal.js';
 import { openBackupModal, closeBackupModal, initBackupModalEvents } from './modals/backupModal.js';
+import { openAiModal, initAiModalEvents } from './modals/aiModal.js';
+import { initQuickAiVoiceEvents } from './services/quickAiVoice.js';
 
 // Renders the currently selected view
 export function renderActiveView() {
@@ -249,26 +251,59 @@ function initAppEvents() {
         btn.addEventListener('click', () => setFilter(btn.dataset.filter));
     });
 
-    // Keyboard shortcuts
+    // Edge-Safe Keyboard Shortcuts (Zero overlap with Microsoft Edge / Chromium defaults)
     window.addEventListener('keydown', (e) => {
-        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'n') {
-            e.preventDefault();
-            openItemModal(null, null, 'task');
-        }
+        // If Escape is pressed, close any open modal or dropdown
         if (e.key === 'Escape') {
-            document.querySelectorAll('.modal-overlay.is-active').forEach(m => m.classList.remove('is-active'));
+            document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('is-active'));
             createMenu?.classList.add('hidden');
             viewSelectorMenu?.classList.add('hidden');
+            return;
         }
-        if ((e.ctrlKey && e.key.toLowerCase() === 'f') || (e.key === '/' && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName))) {
+
+        const tag = (document.activeElement?.tagName || '').toUpperCase();
+        const isInput = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || document.activeElement?.isContentEditable;
+
+        // If a modal is open, do not trigger background navigation shortcuts
+        const isModalOpen = Boolean(document.querySelector('.modal-overlay.is-active'));
+        if (isModalOpen) return;
+
+        // 1. New Task / Item: Alt + N, or N when outside inputs (Replaces Ctrl+N which opened new Edge window)
+        const isNewItemShortcut = (e.altKey && (e.code === 'KeyN' || e.key?.toLowerCase() === 'n'))
+            || (!isInput && !e.ctrlKey && !e.altKey && !e.metaKey && (e.code === 'KeyN' || e.key?.toLowerCase() === 'n'));
+        if (isNewItemShortcut) {
+            e.preventDefault();
+            openItemModal(null, null, 'task');
+            return;
+        }
+
+        // 2. Focus Global Search: '/' or Alt + S (Replaces Ctrl+F which opened Edge browser find bar)
+        const isSearchShortcut = (e.altKey && (e.code === 'KeyS' || e.key?.toLowerCase() === 's'))
+            || (!isInput && !e.ctrlKey && !e.altKey && !e.metaKey && (e.code === 'Slash' || e.key === '/'));
+        if (isSearchShortcut) {
             e.preventDefault();
             searchInput?.focus();
+            return;
         }
-        if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'v') {
+
+        // 3. Switch View: Alt + V, or V when outside inputs (Replaces Ctrl+Shift+V which collided with paste)
+        const isSwitchViewShortcut = (e.altKey && (e.code === 'KeyV' || e.key?.toLowerCase() === 'v'))
+            || (!isInput && !e.ctrlKey && !e.altKey && !e.metaKey && (e.code === 'KeyV' || e.key?.toLowerCase() === 'v'));
+        if (isSwitchViewShortcut) {
             e.preventDefault();
             const views = ['grid', 'table', 'timeline', 'kanban'];
             const nextIdx = (views.indexOf(AppState.currentView) + 1) % views.length;
             switchView(views[nextIdx]);
+            return;
+        }
+
+        // 4. Quick Number Keys 1-4 for Direct View Switching (when outside inputs)
+        if (!isInput && !e.ctrlKey && !e.altKey && !e.metaKey) {
+            if (e.code === 'Digit1' || e.key === '1') { e.preventDefault(); switchView('grid'); }
+            else if (e.code === 'Digit2' || e.key === '2') { e.preventDefault(); switchView('table'); }
+            else if (e.code === 'Digit3' || e.key === '3') { e.preventDefault(); switchView('timeline'); }
+            else if (e.code === 'Digit4' || e.key === '4') { e.preventDefault(); switchView('kanban'); }
+            else if (e.code === 'Comma' || e.key === ',') { e.preventDefault(); openBackupModal(); }
         }
     });
 
@@ -288,6 +323,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     try { initSubjectModalEvents(); } catch (e) { console.error('[App] initSubjectModalEvents error:', e); }
     try { initFolderModalEvents(); } catch (e) { console.error('[App] initFolderModalEvents error:', e); }
     try { initBackupModalEvents(); } catch (e) { console.error('[App] initBackupModalEvents error:', e); }
+    try { initAiModalEvents(); } catch (e) { console.error('[App] initAiModalEvents error:', e); }
+    try { initQuickAiVoiceEvents(); } catch (e) { console.error('[App] initQuickAiVoiceEvents error:', e); }
     try { initAppEvents(); } catch (e) { console.error('[App] initAppEvents error:', e); }
 
     subscribe(() => {

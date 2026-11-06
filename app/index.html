@@ -41,18 +41,21 @@
             </div>
 
             <div class="header-actions">
-                <!-- Standard AppData Disk Sync Badge -->
-                <div class="disk-sync-badge unlinked" id="diskSyncBadge" title="Standard Local Database Storage (%APPDATA%\StudyFlowOrganizer)">
-                    <span class="disk-sync-dot"></span>
-                    <span id="diskSyncText">Checking Server...</span>
-                </div>
+                <!-- Minimalist Single-Color AI Schedule Assistant Trigger -->
+                <button type="button" class="header-icon-btn" id="btnOpenAiModal" title="AI Schedule Assistant (Hold Space / Alt+A to speak, click to open)">
+                    <svg viewBox="0 0 24 24" class="ai-sparkle-icon" fill="currentColor">
+                        <path d="M10 3C10 7.418 6.418 11 2 11C6.418 11 10 14.582 10 19C10 14.582 13.582 11 18 11C13.582 11 10 7.418 10 3Z"/>
+                        <path d="M18 2C18 4.209 16.209 6 14 6C16.209 6 18 7.791 18 10C18 7.791 19.791 6 22 6C19.791 6 18 4.209 18 2Z"/>
+                    </svg>
+                </button>
 
-                <!-- Compact Single "+" Create Button with Dropdown -->
+                <!-- Minimalist Single-Color "+" Create Button with Dropdown -->
                 <div class="dropdown-wrap" id="headerCreateDropdownWrap">
-                    <button type="button" class="btn btn-primary btn-create-floating" id="headerMainCreateBtn" title="Create New...">
-                        <span class="btn-create-icon">+</span>
-                        <span class="btn-create-label">Create</span>
-                        <span class="dropdown-chevron">▾</span>
+                    <button type="button" class="header-icon-btn" id="headerMainCreateBtn" title="Create New...">
+                        <svg viewBox="0 0 24 24">
+                            <line x1="12" y1="5" x2="12" y2="19"/>
+                            <line x1="5" y1="12" x2="19" y2="12"/>
+                        </svg>
                     </button>
                     <div class="floating-dropdown-menu hidden" id="headerCreateMenu">
                         <button type="button" class="dropdown-item" id="menuNewTaskBtn">
@@ -87,9 +90,12 @@
                     </div>
                 </div>
 
-                <!-- Settings (Includes Theme, Local AppData Storage & Shortcuts) -->
-                <button type="button" class="btn btn-secondary btn-sm" id="btnSettingsHeader" title="Settings & Storage">
-                    <span>⚙️ Settings</span>
+                <!-- Minimalist Single-Color Settings Button -->
+                <button type="button" class="header-icon-btn" id="btnSettingsHeader" title="Settings & Storage">
+                    <svg viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                    </svg>
                 </button>
             </div>
         </div>
@@ -426,6 +432,62 @@
                     </div>
                 </div>
 
+                <!-- AI Assistant Configuration -->
+                <div class="form-group" style="margin-top: 4px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                        <label class="form-label" style="font-weight: 700; color: var(--palette-powder-petal); margin: 0;">
+                            ✨ AI Assistant Configuration:
+                        </label>
+                        <span id="aiSettingsStatusPill" class="ai-status-pill status-unconfigured">Unconfigured</span>
+                    </div>
+
+                    <div class="ai-settings-card">
+                        <!-- Provider Custom Select -->
+                        <div class="form-group" style="margin-bottom: 8px;">
+                            <label class="form-label" style="font-size: 0.74rem;">AI Provider:</label>
+                            <div id="aiProviderSelectWrap"></div>
+                            <input type="hidden" id="aiProviderSelect" value="gemini">
+                        </div>
+
+                        <!-- Custom Base URL (hidden unless custom) -->
+                        <div class="form-group hidden" id="aiBaseUrlWrap" style="margin-bottom: 8px;">
+                            <label class="form-label" style="font-size: 0.74rem;">Base URL / Endpoint:</label>
+                            <input type="text" id="aiBaseUrlInput" class="form-input" placeholder="e.g. https://openrouter.ai/api/v1 or http://localhost:11434/v1">
+                        </div>
+
+                        <!-- API Key Input -->
+                        <div class="form-group" style="margin-bottom: 8px;">
+                            <label class="form-label" style="font-size: 0.74rem;">API Key:</label>
+                            <div style="display: flex; gap: 6px;">
+                                <input type="password" id="aiApiKeyInput" class="form-input" placeholder="Paste your API key here (e.g. AIzaSy... or sk-...)" style="font-family: monospace;">
+                                <button type="button" class="btn btn-secondary btn-sm" id="btnToggleApiKeyVisibility" title="Show / Hide Key" style="padding: 0 10px;">👁️</button>
+                            </div>
+                            <span style="font-size: 0.69rem; color: var(--text-muted); margin-top: 3px; display: block;" id="aiApiKeyHint">
+                                For Gemini, get a free key from <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: var(--palette-stormy-teal);">Google AI Studio</a>.
+                            </span>
+                        </div>
+
+                        <!-- Fetch Models Button & Model Custom Select -->
+                        <div class="form-group" style="margin-bottom: 8px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                <label class="form-label" style="font-size: 0.74rem; margin: 0;">AI Model:</label>
+                                <button type="button" class="btn btn-sm btn-outline-cyan" id="btnFetchAiModels" style="font-size: 0.72rem; padding: 2px 8px;">
+                                    🔄 Fetch Models from API
+                                </button>
+                            </div>
+                            <div id="aiModelSelectWrap"></div>
+                            <input type="hidden" id="aiModelSelect" value="">
+                            <span id="aiModelStatusText" style="font-size: 0.7rem; color: var(--text-muted); margin-top: 3px; display: block;"></span>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 10px;">
+                            <button type="button" class="btn btn-secondary btn-sm" id="btnTestAiConnection">Test Connection</button>
+                            <button type="button" class="btn btn-primary btn-sm" id="btnSaveAiConfig">Save Settings</button>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Keyboard Shortcuts Cheat Sheet (Embedded Inside Settings) -->
                 <div class="form-group" style="margin-top: 4px;">
                     <label class="form-label" style="font-weight: 700; color: var(--palette-powder-petal);">
@@ -433,16 +495,24 @@
                     </label>
                     <div style="display: flex; flex-direction: column; gap: 6px; background: rgba(40, 61, 59, 0.6); padding: 10px 14px; border-radius: var(--radius-sm); border: 1px solid rgba(237, 221, 212, 0.12);">
                         <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid rgba(237, 221, 212, 0.08);">
+                            <span style="font-size: 0.82rem; color: var(--text-secondary);">Push-to-Talk AI Voice (Hold)</span>
+                            <kbd style="background: rgba(30, 46, 44, 0.9); border: 1px solid rgba(45, 212, 191, 0.4); color: #2dd4bf; padding: 2px 7px; border-radius: 5px; font-family: monospace; font-size: 0.78rem;">Hold Space or Alt + A</kbd>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid rgba(237, 221, 212, 0.08);">
+                            <span style="font-size: 0.82rem; color: var(--text-secondary);">Open AI Assistant Modal</span>
+                            <kbd style="background: rgba(30, 46, 44, 0.9); border: 1px solid rgba(45, 212, 191, 0.4); color: #2dd4bf; padding: 2px 7px; border-radius: 5px; font-family: monospace; font-size: 0.78rem;">Alt + A or A</kbd>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid rgba(237, 221, 212, 0.08);">
                             <span style="font-size: 0.82rem; color: var(--text-secondary);">Open New Item Modal</span>
-                            <kbd style="background: rgba(30, 46, 44, 0.9); border: 1px solid rgba(237, 221, 212, 0.18); padding: 2px 7px; border-radius: 5px; font-family: monospace; font-size: 0.78rem;">Ctrl + N</kbd>
+                            <kbd style="background: rgba(30, 46, 44, 0.9); border: 1px solid rgba(237, 221, 212, 0.18); padding: 2px 7px; border-radius: 5px; font-family: monospace; font-size: 0.78rem;">Alt + N or N</kbd>
                         </div>
                         <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid rgba(237, 221, 212, 0.08);">
                             <span style="font-size: 0.82rem; color: var(--text-secondary);">Focus Global Search</span>
-                            <kbd style="background: rgba(30, 46, 44, 0.9); border: 1px solid rgba(237, 221, 212, 0.18); padding: 2px 7px; border-radius: 5px; font-family: monospace; font-size: 0.78rem;">/ or Ctrl + F</kbd>
+                            <kbd style="background: rgba(30, 46, 44, 0.9); border: 1px solid rgba(237, 221, 212, 0.18); padding: 2px 7px; border-radius: 5px; font-family: monospace; font-size: 0.78rem;">/ or Alt + S</kbd>
                         </div>
                         <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid rgba(237, 221, 212, 0.08);">
-                            <span style="font-size: 0.82rem; color: var(--text-secondary);">Switch View (Cards / Matrix / Timeline / Kanban)</span>
-                            <kbd style="background: rgba(30, 46, 44, 0.9); border: 1px solid rgba(237, 221, 212, 0.18); padding: 2px 7px; border-radius: 5px; font-family: monospace; font-size: 0.78rem;">Ctrl + Shift + V</kbd>
+                            <span style="font-size: 0.82rem; color: var(--text-secondary);">Cycle Views / Direct Views</span>
+                            <kbd style="background: rgba(30, 46, 44, 0.9); border: 1px solid rgba(237, 221, 212, 0.18); padding: 2px 7px; border-radius: 5px; font-family: monospace; font-size: 0.78rem;">Alt + V or 1, 2, 3, 4</kbd>
                         </div>
                         <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 0;">
                             <span style="font-size: 0.82rem; color: var(--text-secondary);">Close Active Dialog</span>
@@ -453,6 +523,157 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-primary" id="btnCloseSettings">Done</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================================
+         MODAL 5: SMART AI SCHEDULE ASSISTANT & PREVIEW MODAL
+         ======================================================================== -->
+    <div id="aiModal" class="modal-overlay">
+        <div class="modal-window ai-modal-window">
+            <!-- Minimalist AI Header -->
+            <div class="modal-header ai-modal-header">
+                <div class="ai-header-brand">
+                    <div class="ai-header-icon-box">
+                        <svg viewBox="0 0 24 24" fill="currentColor" class="ai-sparkle-icon ai-header-svg">
+                            <path d="M10 3C10 7.418 6.418 11 2 11C6.418 11 10 14.582 10 19C10 14.582 13.582 11 18 11C13.582 11 10 7.418 10 3Z"/>
+                            <path d="M18 2C18 4.209 16.209 6 14 6C16.209 6 18 7.791 18 10C18 7.791 19.791 6 22 6C19.791 6 18 4.209 18 2Z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h2 class="ai-modal-title">AI Schedule Assistant</h2>
+                        <p class="ai-modal-subtitle">Schedule deadlines, tasks, and exams via voice or text</p>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <!-- Small History Actions: Preview Last Changes & Undo -->
+                    <div id="aiHistoryActions" class="ai-history-actions hidden">
+                        <button type="button" class="btn-ai-history" id="btnAiPreviewLast" title="Preview changes from last session">
+                            <span>📋 Last Changes</span>
+                        </button>
+                        <button type="button" class="btn-ai-history btn-ai-undo" id="btnAiUndoLast" title="Undo all changes from last session">
+                            <span>↺ Undo</span>
+                        </button>
+                    </div>
+                    <button type="button" id="aiActiveModelBadge" class="ai-model-badge" title="Click to configure in Settings">
+                        Gemini
+                    </button>
+                    <button type="button" class="modal-close-btn" id="aiModalCloseBtn">&times;</button>
+                </div>
+            </div>
+
+            <div class="modal-body ai-modal-body">
+                <!-- Context Info Strip -->
+                <div class="ai-context-strip" id="aiContextStrip">
+                    <div class="ai-context-item">
+                        <span class="context-label">Calendar:</span>
+                        <strong id="aiContextDate">Loading calendar...</strong>
+                    </div>
+                    <div class="ai-context-item">
+                        <span class="context-label">Courses:</span>
+                        <strong id="aiContextCourses">0 courses</strong>
+                    </div>
+                </div>
+
+                <!-- Input Section with Telegram-style Push-to-Hold Mic -->
+                <div class="ai-input-card">
+                    <div class="ai-input-stage">
+                        <!-- Standard Textarea Wrapper -->
+                        <div class="ai-textarea-wrapper" id="aiTextareaWrapper">
+                            <textarea id="aiPromptInput" class="ai-prompt-textarea" placeholder="Type a scheduling instruction in English or Persian, or hold the mic below..."></textarea>
+                        </div>
+
+                        <!-- Telegram-Style Recording Overlay Capsule (Expands left over textarea) -->
+                        <div id="aiVoiceLiveIndicator" class="ai-voice-recording-capsule hidden">
+                            <div class="capsule-pulse-dot"></div>
+                            <div class="capsule-wave-bars">
+                                <span class="wave-bar"></span>
+                                <span class="wave-bar"></span>
+                                <span class="wave-bar"></span>
+                                <span class="wave-bar"></span>
+                                <span class="wave-bar"></span>
+                                <span class="wave-bar"></span>
+                                <span class="wave-bar"></span>
+                            </div>
+                            <span id="aiRecordingTimerText" class="capsule-timer">00:00</span>
+                            <span class="capsule-hint">Release to finish</span>
+                        </div>
+                    </div>
+
+                    <!-- Bottom Action Row: Audio Snippet + Clear + Telegram Mic + Process -->
+                    <div class="ai-action-bar">
+                        <!-- Audio playback pill (appears after hold is finished) -->
+                        <div id="aiAudioSnippetWrap" class="ai-audio-snippet-wrap hidden">
+                            <button type="button" class="btn-audio-icon" id="btnAiPlayAudio" title="Play recording">
+                                <span id="aiPlayIcon">▶</span>
+                            </button>
+                            <span id="aiAudioDurationText" class="audio-clip-duration">0:00</span>
+                            <button type="button" class="btn-audio-icon btn-audio-discard" id="btnAiRemoveAudio" title="Discard voice note">
+                                &times;
+                            </button>
+                        </div>
+
+                        <div style="flex: 1;"></div>
+
+                        <!-- Clear Button -->
+                        <button type="button" class="btn btn-secondary btn-sm" id="btnAiClearPrompt" title="Clear text and recording">Clear</button>
+
+                        <!-- Telegram-Style Mic Push & Hold Button (NO text!) -->
+                        <button type="button" class="btn-telegram-mic" id="btnAiVoiceRecord" title="Press & hold to record voice">
+                            <svg viewBox="0 0 24 24" class="telegram-mic-svg">
+                                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                                <line x1="12" y1="19" x2="12" y2="23"/>
+                                <line x1="8" y1="23" x2="16" y2="23"/>
+                            </svg>
+                        </button>
+
+                        <!-- Process Instruction Button -->
+                        <button type="button" class="btn btn-primary btn-sm ai-analyze-btn" id="btnAiAnalyze">
+                            <span class="btn-spinner hidden" id="aiAnalyzeSpinner"></span>
+                            <span id="aiAnalyzeBtnText">Process Instruction</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Minimal Thinking State -->
+                <div id="aiThinkingState" class="ai-thinking-state hidden">
+                    <div class="ai-thinking-spinner"></div>
+                    <p id="aiThinkingStatus">Analyzing schedule...</p>
+                    <span style="font-size: 0.73rem; color: var(--text-muted);">Correlating dates, courses & events</span>
+                </div>
+
+                <!-- Error Banner -->
+                <div id="aiErrorBanner" class="ai-error-banner hidden"></div>
+
+                <!-- Editable Proposed Actions Preview Section -->
+                <div id="aiPreviewContainer" class="ai-preview-container hidden">
+                    <div class="ai-preview-header">
+                        <div>
+                            <h3 class="ai-preview-title">Proposed Schedule Changes</h3>
+                            <p id="aiPreviewSummary" class="ai-preview-summary">0 items detected</p>
+                        </div>
+                    </div>
+
+                    <!-- Editable Action Cards Container -->
+                    <div id="aiActionCardsList" class="ai-action-cards-list"></div>
+
+                    <!-- Bottom Right Actions Footer (Apply & Discard on the bottom right) -->
+                    <div class="ai-preview-footer">
+                        <button type="button" class="btn btn-secondary btn-sm" id="btnAiDiscardAll">Discard All</button>
+                        <button type="button" class="btn btn-primary btn-sm ai-apply-all-btn" id="btnAiApplyAll">
+                            Apply All (<span id="aiActionCount">0</span>)
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer ai-modal-footer">
+                <span style="font-size: 0.72rem; color: var(--text-muted);">
+                    Understands natural voice &amp; text instructions in English and Persian.
+                </span>
+                <button type="button" class="btn btn-secondary btn-sm" id="btnAiClose">Close</button>
             </div>
         </div>
     </div>
