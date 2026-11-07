@@ -133,6 +133,7 @@ Study_Flow_Organizer/
 │
 ├── scripts/                          # Maintenance, Build & CLI Tools
 │   ├── build_standalone_exe.js       # Bundles application into standalone executable
+│   ├── build_c_launcher.bat          # Automated script to compile native C launcher with icon
 │   ├── launcher.c                    # Pure C Windows GUI launcher source
 │   ├── generate_icon.py              # Icon generation utility
 │   ├── Deregister_Legacy_Protocol.bat# Removes deprecated openfile:// registry key
@@ -179,6 +180,53 @@ npm start
 
 #### Option D: Standalone Browser Mode (No Node.js Required)
 Simply double-click **`app/index.html`** in your file manager to use the application entirely inside your browser using `localStorage`.
+
+---
+
+## 🔨 Building Standalone Executable (.exe)
+
+Study Flow Organizer provides multiple options to build native `.exe` binaries for Windows:
+
+### Method 1: Self-Contained Standalone Executable (Recommended)
+Bundles the entire application, local server, and a portable Node.js runtime into a single, standalone executable that runs on any Windows machine without requiring Node.js to be installed.
+
+```bash
+npm run build:exe
+```
+* **How it works**: Uses `scripts/build_standalone_exe.js` and `caxa` to bundle all runtime assets, then automatically patches the Windows PE header from Subsystem 3 (Console) to Subsystem 2 (Windows GUI).
+* **Zero Terminal Flashing**: Launches cleanly as a native desktop application with no black terminal window.
+* **Output**: `dist/Study_Flow_Organizer.exe` (~35 MB). You can copy this single file to any Windows computer and run it directly.
+
+---
+
+### Method 2: Ultra-Lightweight Native C Launcher (~50 KB)
+If you prefer a tiny, native Windows launcher that uses your existing system Node.js and Edge/Chrome browser:
+
+* **Using Batch Script**: Double-click **`scripts/build_c_launcher.bat`**
+* **Or via npm / GCC command**:
+  ```bash
+  npm run build:launcher
+  ```
+  *(Requires MinGW-w64 GCC and `windres` installed on your machine)*
+* **How it works**: Compiles `scripts/launcher.c` and `scripts/app.rc` into a pure Win32 GUI executable with the application icon embedded. Silently checks port `3456`, spawns the server with `CREATE_NO_WINDOW`, and opens Edge/Chrome in dedicated app mode.
+* **Output**: `Study_Flow_Organizer.exe` in the repository root.
+
+---
+
+### Method 3: Native Desktop Build with Tauri (Rust + WebView2)
+For an ultra-compact native desktop binary and Windows installer (.msi):
+
+```bash
+# 1. Install Tauri CLI (if not already installed)
+cargo install tauri-cli
+
+# 2. Build production release
+npm run build:tauri
+# or
+cargo tauri build
+```
+* **How it works**: Uses Tauri 1.5 to compile a native Rust application window backed by Microsoft Edge WebView2.
+* **Output**: `src-tauri/target/release/bundle/msi/` and `src-tauri/target/release/`.
 
 ---
 

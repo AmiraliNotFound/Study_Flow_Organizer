@@ -7,7 +7,8 @@
     "start": "node desktop/launcher.js",
     "server": "node server/server.js",
     "build:exe": "node scripts/build_standalone_exe.js",
-    "build:launcher": "gcc -mwindows -O2 scripts/launcher.c -o Study_Flow_Organizer.exe"
+    "build:launcher": "gcc -mwindows -O2 scripts/launcher.c -o Study_Flow_Organizer.exe -lws2_32",
+    "build:tauri": "cargo tauri build"
   },
   "keywords": [
     "academic",
