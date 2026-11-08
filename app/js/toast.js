@@ -44,9 +44,10 @@ export function showToast({
     toast.className = `custom-toast toast-${type} toast-enter`;
 
     let iconSvg = ICONS.checkCircle;
-    if (type === 'error' || type === 'delete') iconSvg = ICONS.alert;
-    else if (type === 'warning') iconSvg = ICONS.alert;
+    if (type === 'delete') iconSvg = ICONS.trash;
+    else if (type === 'error' || type === 'warning') iconSvg = ICONS.alert;
     else if (type === 'info') iconSvg = ICONS.schedule;
+    else if (type === 'success') iconSvg = ICONS.checkCircle;
 
     toast.innerHTML = `
         <div class="toast-content-wrap">
