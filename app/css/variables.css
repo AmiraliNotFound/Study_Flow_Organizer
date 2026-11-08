@@ -1,15 +1,16 @@
 /* ==========================================================================
    DESIGN SYSTEM & COLOR THEME VARIABLES
-   Strict 5-Color Master Palette:
-     1. #283D3B - Dark Slate Grey
-     2. #197278 - Stormy Teal
-     3. #EDDDD4 - Powder Petal
-     4. #C44536 - Tomato Jam
-     5. #772E25 - Chestnut
+   Dynamic 5-Color Master Palette System:
+     1. Primary Accent (Brand / Stormy Teal)
+     2. Canvas Dark Base
+     3. Card Surface
+     4. Powder Petal / Foreground Text
+     5. Tomato Jam / Urgent Alert
+     6. Chestnut / Secondary Accent
    ========================================================================== */
 
 :root {
-    /* --- Master Color Swatches --- */
+    /* --- Master Color Swatches (Dynamic Defaults) --- */
     --palette-dark-slate: #283D3B;
     --palette-stormy-teal: #197278;
     --palette-powder-petal: #EDDDD4;
@@ -25,31 +26,31 @@
     --card-border: rgba(237, 221, 212, 0.14);
     --card-border-hover: rgba(25, 114, 120, 0.65);
 
-    /* --- Primary Interactive (Stormy Teal) --- */
+    /* --- Primary Interactive --- */
     --color-primary: #197278;
     --color-primary-light: #228b93;
     --color-primary-dark: #12555a;
     --color-primary-glow: rgba(25, 114, 120, 0.40);
     --color-primary-subtle: rgba(25, 114, 120, 0.16);
 
-    /* --- Typography & Light Surfaces (Powder Petal) --- */
+    /* --- Typography & Light Surfaces --- */
     --text-primary: #EDDDD4;
     --text-secondary: rgba(237, 221, 212, 0.78);
     --text-muted: rgba(237, 221, 212, 0.52);
     --text-subtle: rgba(237, 221, 212, 0.32);
 
-    /* --- Urgency / Alerts / Danger (Tomato Jam) --- */
+    /* --- Urgency / Alerts / Danger --- */
     --color-urgent: #C44536;
     --color-urgent-light: #d65545;
     --color-urgent-glow: rgba(196, 69, 54, 0.45);
     --color-urgent-subtle: rgba(196, 69, 54, 0.18);
 
-    /* --- Warm Secondary & Borders (Chestnut) --- */
+    /* --- Warm Secondary & Borders --- */
     --color-chestnut: #772E25;
     --color-chestnut-glow: rgba(119, 46, 37, 0.35);
     --color-chestnut-subtle: rgba(119, 46, 37, 0.20);
 
-    /* --- Success & In Progress (Harmonized with Stormy Teal) --- */
+    /* --- Success & In Progress --- */
     --color-success: #2dd4bf;
     --color-success-subtle: rgba(45, 212, 191, 0.16);
 
@@ -59,13 +60,13 @@
     --radius-lg: 20px;
     --radius-xl: 26px;
 
-    /* --- Backward-Compatibility Aliases (Map to 5-Color Master Palette) --- */
+    /* --- Backward-Compatibility Aliases --- */
     --card-slate: var(--card-surface);
     --card-slate-glass: var(--card-surface-glass);
     --card-slate-border: var(--card-border);
     --card-hover-border: var(--card-border-hover);
     --blue-gradient-start: var(--palette-stormy-teal);
-    --blue-gradient-end: #228b93;
+    --blue-gradient-end: var(--color-primary-light);
     --blue-accent-cyan: #2dd4bf;
     --blue-glow: var(--color-primary-glow);
     --urgent-amber: var(--palette-chestnut);
@@ -80,18 +81,19 @@
 
 /* ==========================================================================
    FLAT THEME VARIANT (Clean, Minimal, Solid, Zero-Glass Blur)
+   Dynamic CSS variables with zero hardcoding
    ========================================================================== */
 body.theme-flat {
-    background-color: #1a2725 !important;
+    background-color: var(--bg-canvas) !important;
     background-image: none !important;
 }
 
 body.theme-flat .app-header {
-    background: #233533 !important;
+    background: var(--bg-canvas-deep) !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25) !important;
-    border: 1px solid rgba(237, 221, 212, 0.12) !important;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35) !important;
+    border: 1px solid var(--card-border) !important;
 }
 
 body.theme-flat .glass-panel,
@@ -101,26 +103,32 @@ body.theme-flat .subject-card,
 body.theme-flat .kanban-column,
 body.theme-flat .floating-dropdown-menu,
 body.theme-flat .custom-select-dropdown,
-body.theme-flat .month-calendar-wrapper {
-    background: #283D3B !important;
+body.theme-flat .month-calendar-wrapper,
+body.theme-flat .calendar-view-container,
+body.theme-flat .calendar-day-cell {
+    background: var(--card-surface) !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
-    border: 1px solid rgba(237, 221, 212, 0.12) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+    border: 1px solid var(--card-border) !important;
+}
+
+body.theme-flat .subject-header-banner {
+    background-image: none !important;
 }
 
 body.theme-flat .btn-primary {
-    background: var(--palette-stormy-teal) !important;
+    background: var(--color-primary) !important;
     box-shadow: none !important;
-    border: 1px solid rgba(237, 221, 212, 0.18) !important;
+    border: 1px solid var(--card-border) !important;
 }
 
 body.theme-flat .btn-primary:hover {
-    background: #20868d !important;
+    background: var(--color-primary-light) !important;
     box-shadow: none !important;
 }
 
 body.theme-flat .btn-secondary {
-    background: #20312f !important;
-    border: 1px solid rgba(237, 221, 212, 0.12) !important;
+    background: var(--bg-canvas-deep) !important;
+    border: 1px solid var(--card-border) !important;
 }

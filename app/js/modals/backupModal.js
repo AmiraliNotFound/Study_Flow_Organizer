@@ -6,6 +6,8 @@ import { AppState, setAppStateData, persistCurrentState } from '../state.js';
 import { isServerConnected } from '../api.js';
 import { getAiConfig, saveAiConfig, fetchAiModels } from '../services/aiService.js';
 import { CustomSelect } from '../components/customSelect.js';
+import { applyPalette, getActivePaletteId, getSavedCustomColors } from '../theme.js';
+import { openTrashModal } from './trashModal.js';
 
 let aiProviderCustomSelect = null;
 let aiModelCustomSelect = null;
@@ -37,6 +39,7 @@ export async function openBackupModal() {
 
     // Populate AI Assistant Settings
     populateAiSettingsForm();
+    updateSettingsPaletteUI();
 
     modal.classList.add('is-active');
 }
@@ -100,6 +103,35 @@ function populateAiSettingsForm() {
     }
 
     if (statusText) statusText.textContent = '';
+}
+
+export function updateSettingsPaletteUI() {
+    const activePalette = getActivePaletteId();
+    document.querySelectorAll('.palette-card-option').forEach(card => {
+        card.classList.toggle('is-active', card.dataset.palette === activePalette);
+    });
+
+    const customWrap = document.getElementById('customPaletteControlsWrap');
+    if (customWrap) {
+        customWrap.classList.toggle('hidden', activePalette !== 'custom');
+    }
+
+    const custom = getSavedCustomColors();
+    const setCol = (id, val) => {
+        const el = document.getElementById(id);
+        if (el && val) el.value = val;
+    };
+    setCol('pickerColorPrimary', custom.primary);
+    setCol('pickerColorCanvas', custom.canvas);
+    setCol('pickerColorSurface', custom.surface);
+    setCol('pickerColorText', custom.text);
+    setCol('pickerColorUrgent', custom.urgent);
+
+    const trashBadge = document.getElementById('settingsTrashCountBadge');
+    if (trashBadge) {
+        const count = AppState.trash?.subjects?.length || 0;
+        trashBadge.textContent = `${count} course${count === 1 ? '' : 's'}`;
+    }
 }
 
 export function closeBackupModal() {
@@ -184,6 +216,37 @@ export function initBackupModalEvents() {
             alert('Workspace cleared.');
             closeBackupModal();
         }
+    });
+
+    // Palette selection events (Req 3)
+    document.querySelectorAll('.palette-card-option').forEach(card => {
+        card.addEventListener('click', () => {
+            const paletteId = card.dataset.palette;
+            applyPalette(paletteId);
+            updateSettingsPaletteUI();
+        });
+    });
+
+    // Custom 5-Color Pickers
+    const onCustomColorChange = () => {
+        const custom = {
+            primary: document.getElementById('pickerColorPrimary')?.value || '#197278',
+            canvas: document.getElementById('pickerColorCanvas')?.value || '#1e2e2c',
+            surface: document.getElementById('pickerColorSurface')?.value || '#283D3B',
+            text: document.getElementById('pickerColorText')?.value || '#EDDDD4',
+            urgent: document.getElementById('pickerColorUrgent')?.value || '#C44536'
+        };
+        applyPalette('custom', custom);
+        updateSettingsPaletteUI();
+    };
+
+    ['pickerColorPrimary', 'pickerColorCanvas', 'pickerColorSurface', 'pickerColorText', 'pickerColorUrgent'].forEach(id => {
+        document.getElementById(id)?.addEventListener('input', onCustomColorChange);
+    });
+
+    // Open Trash Modal from Settings (Req 7)
+    document.getElementById('btnSettingsOpenTrash')?.addEventListener('click', () => {
+        openTrashModal();
     });
 
     // --- AI Configuration Event Listeners ---

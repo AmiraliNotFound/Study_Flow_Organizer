@@ -1,15 +1,16 @@
 /**
  * Study Flow Organizer v4.2 - Main Application Controller
- * Floating Navigation, Flat/Glass Theme Settings, Custom Controls & Master Color Palette
+ * Floating Navigation, Flat/Glass Theme Settings, Custom Controls, Palette Engine & Calendar View
  */
 
-import { AppState, subscribe, setAppStateData } from './state.js';
+import { AppState, subscribe, setAppStateData, addGlobalTag } from './state.js';
 import { loadData, isServerConnected, openDataDirectory } from './api.js';
 import { formatDate } from './dateUtils.js';
 import { formatDualDate } from './jalali.js';
+import { applyPalette, getActivePaletteId } from './theme.js';
 
 import { renderCardsView } from './views/cardsView.js';
-import { renderTableView } from './views/tableView.js';
+import { renderCalendarView } from './views/calendarView.js';
 import { renderTimelineView } from './views/timelineView.js';
 import { renderKanbanView } from './views/kanbanView.js';
 
@@ -17,27 +18,28 @@ import { openItemModal, initItemModalEvents } from './modals/itemModal.js';
 import { openSubjectModal, initSubjectModalEvents } from './modals/subjectModal.js';
 import { openFolderModal, initFolderModalEvents } from './modals/folderModal.js';
 import { openBackupModal, closeBackupModal, initBackupModalEvents } from './modals/backupModal.js';
+import { openTrashModal, closeTrashModal, initTrashModalEvents } from './modals/trashModal.js';
 import { openAiModal, initAiModalEvents } from './modals/aiModal.js';
 import { initQuickAiVoiceEvents } from './services/quickAiVoice.js';
 
 // Renders the currently selected view
 export function renderActiveView() {
     const gridContainer = document.getElementById('gridContentView');
-    const tableContainer = document.getElementById('tableContentView');
+    const calendarContainer = document.getElementById('calendarContentView');
     const timelineContainer = document.getElementById('timelineContentView');
     const kanbanContainer = document.getElementById('kanbanContentView');
 
-    if (!gridContainer || !tableContainer || !timelineContainer || !kanbanContainer) return;
+    if (!gridContainer || !calendarContainer || !timelineContainer || !kanbanContainer) return;
 
     gridContainer.classList.toggle('hidden', AppState.currentView !== 'grid');
-    tableContainer.classList.toggle('hidden', AppState.currentView !== 'table');
+    calendarContainer.classList.toggle('hidden', AppState.currentView !== 'calendar');
     timelineContainer.classList.toggle('hidden', AppState.currentView !== 'timeline');
     kanbanContainer.classList.toggle('hidden', AppState.currentView !== 'kanban');
 
     if (AppState.currentView === 'grid') {
         renderCardsView(gridContainer);
-    } else if (AppState.currentView === 'table') {
-        renderTableView(tableContainer);
+    } else if (AppState.currentView === 'calendar') {
+        renderCalendarView(calendarContainer);
     } else if (AppState.currentView === 'timeline') {
         renderTimelineView(timelineContainer);
     } else if (AppState.currentView === 'kanban') {
@@ -45,6 +47,7 @@ export function renderActiveView() {
     }
 
     renderCounters();
+    renderTagFilterStrip();
     updateDiskFileBadge();
     updateHeaderDateDisplay();
 }
@@ -90,6 +93,43 @@ function renderCounters() {
     if (elCompleted) elCompleted.textContent = String(completedCount);
 }
 
+// Render dynamic topic tags in the filter row (Req 2)
+function renderTagFilterStrip() {
+    const wrap = document.getElementById('tagsPillsScrollWrap');
+    if (!wrap) return;
+    wrap.innerHTML = '';
+
+    const allTags = new Set(AppState.config.tags || []);
+    AppState.subjects.forEach(s => {
+        if (Array.isArray(s.tags)) s.tags.forEach(t => allTags.add(t));
+    });
+
+    // "All Topics" pill
+    const allPill = document.createElement('button');
+    allPill.type = 'button';
+    allPill.className = `tag-filter-pill ${AppState.activeTagFilter === 'all' || !AppState.activeTagFilter ? 'active' : ''}`;
+    allPill.textContent = 'All Topics';
+    allPill.addEventListener('click', () => {
+        AppState.activeTagFilter = 'all';
+        renderActiveView();
+    });
+    wrap.appendChild(allPill);
+
+    // Individual tag pills
+    Array.from(allTags).sort().forEach(tag => {
+        const pill = document.createElement('button');
+        pill.type = 'button';
+        pill.className = `tag-filter-pill ${AppState.activeTagFilter?.toLowerCase() === tag.toLowerCase() ? 'active' : ''}`;
+        pill.dataset.tag = tag;
+        pill.textContent = `#${tag}`;
+        pill.addEventListener('click', () => {
+            AppState.activeTagFilter = AppState.activeTagFilter?.toLowerCase() === tag.toLowerCase() ? 'all' : tag;
+            renderActiveView();
+        });
+        wrap.appendChild(pill);
+    });
+}
+
 // Update status badge in header
 function updateDiskFileBadge() {
     const badge = document.getElementById('diskSyncBadge');
@@ -105,10 +145,10 @@ function updateDiskFileBadge() {
     }
 }
 
-// View switcher
+// View switcher metadata (Matrix view removed, Calendar view added - Req 5 & Req 8)
 const VIEW_METADATA = {
     grid: { label: 'Cards View', icon: '🗂️' },
-    table: { label: 'Matrix Table', icon: '📑' },
+    calendar: { label: 'Calendar View', icon: '📅' },
     timeline: { label: 'Timeline View', icon: '⏳' },
     kanban: { label: 'Kanban Board', icon: '📌' }
 };
@@ -150,11 +190,56 @@ function applyTheme(themeName) {
         optGlass.classList.toggle('is-active', !isFlat);
         optFlat.classList.toggle('is-active', isFlat);
     }
+
+    // Refresh dynamic topic colors/gradients according to flat or glass mode (Req 3)
+    applyPalette(getActivePaletteId());
 }
 
 function initTheme() {
     const saved = localStorage.getItem('study_flow_theme_style') || 'glass';
     applyTheme(saved);
+    applyPalette(getActivePaletteId());
+}
+
+// Tag Management Modal Functions
+function openTagManagerModal() {
+    const modal = document.getElementById('tagManagerModal');
+    if (!modal) return;
+    renderTagManagerList();
+    modal.classList.add('is-active');
+}
+
+function closeTagManagerModal() {
+    const modal = document.getElementById('tagManagerModal');
+    if (modal) modal.classList.remove('is-active');
+    renderActiveView();
+}
+
+function renderTagManagerList() {
+    const wrap = document.getElementById('modalAllTagsWrap');
+    if (!wrap) return;
+    wrap.innerHTML = '';
+
+    const allTags = new Set(AppState.config.tags || []);
+    AppState.subjects.forEach(s => {
+        if (Array.isArray(s.tags)) s.tags.forEach(t => allTags.add(t));
+    });
+
+    if (allTags.size === 0) {
+        wrap.innerHTML = `<span style="font-size: 0.8rem; color: var(--text-muted); font-style: italic;">No tags defined yet</span>`;
+        return;
+    }
+
+    Array.from(allTags).sort().forEach(tag => {
+        const count = AppState.subjects.filter(s => Array.isArray(s.tags) && s.tags.includes(tag)).length;
+        const chip = document.createElement('div');
+        chip.className = 'modal-tag-chip-row';
+        chip.innerHTML = `
+            <span class="chip-tag-name">#${tag}</span>
+            <span class="chip-course-count">${count} course${count === 1 ? '' : 's'}</span>
+        `;
+        wrap.appendChild(chip);
+    });
 }
 
 // Setup all event listeners
@@ -220,6 +305,9 @@ function initAppEvents() {
     document.getElementById('settingsModalCloseBtn')?.addEventListener('click', closeBackupModal);
     document.getElementById('btnCloseSettings')?.addEventListener('click', closeBackupModal);
 
+    // Trash Button in Header
+    document.getElementById('btnTrashHeader')?.addEventListener('click', openTrashModal);
+
     // Theme Switcher Options inside Settings
     document.getElementById('themeOptionGlass')?.addEventListener('click', () => applyTheme('glass'));
     document.getElementById('themeOptionFlat')?.addEventListener('click', () => applyTheme('flat'));
@@ -227,6 +315,22 @@ function initAppEvents() {
     // Open AppData in Explorer from Settings
     document.getElementById('btnSettingsOpenFolder')?.addEventListener('click', async () => {
         await openDataDirectory();
+    });
+
+    // Tag Filter Bar "+" button (Req 2)
+    document.getElementById('btnOpenNewTagModal')?.addEventListener('click', openTagManagerModal);
+    document.getElementById('tagModalCloseBtn')?.addEventListener('click', closeTagManagerModal);
+    document.getElementById('btnCloseTagModal')?.addEventListener('click', closeTagManagerModal);
+
+    document.getElementById('btnSaveNewTag')?.addEventListener('click', async () => {
+        const input = document.getElementById('inputNewTagName');
+        const val = (input?.value || '').trim().replace(/^#+/, '');
+        if (val) {
+            await addGlobalTag(val);
+            if (input) input.value = '';
+            renderTagManagerList();
+            renderTagFilterStrip();
+        }
     });
 
     // Search bar
@@ -251,9 +355,8 @@ function initAppEvents() {
         btn.addEventListener('click', () => setFilter(btn.dataset.filter));
     });
 
-    // Edge-Safe Keyboard Shortcuts (Zero overlap with Microsoft Edge / Chromium defaults)
+    // Edge-Safe Keyboard Shortcuts
     window.addEventListener('keydown', (e) => {
-        // If Escape is pressed, close any open modal or dropdown
         if (e.key === 'Escape') {
             document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('is-active'));
             createMenu?.classList.add('hidden');
@@ -264,11 +367,10 @@ function initAppEvents() {
         const tag = (document.activeElement?.tagName || '').toUpperCase();
         const isInput = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || document.activeElement?.isContentEditable;
 
-        // If a modal is open, do not trigger background navigation shortcuts
         const isModalOpen = Boolean(document.querySelector('.modal-overlay.is-active'));
         if (isModalOpen) return;
 
-        // 1. New Task / Item: Alt + N, or N when outside inputs (Replaces Ctrl+N which opened new Edge window)
+        // 1. New Item: Alt + N or N
         const isNewItemShortcut = (e.altKey && (e.code === 'KeyN' || e.key?.toLowerCase() === 'n'))
             || (!isInput && !e.ctrlKey && !e.altKey && !e.metaKey && (e.code === 'KeyN' || e.key?.toLowerCase() === 'n'));
         if (isNewItemShortcut) {
@@ -277,7 +379,7 @@ function initAppEvents() {
             return;
         }
 
-        // 2. Focus Global Search: '/' or Alt + S (Replaces Ctrl+F which opened Edge browser find bar)
+        // 2. Search: '/' or Alt + S
         const isSearchShortcut = (e.altKey && (e.code === 'KeyS' || e.key?.toLowerCase() === 's'))
             || (!isInput && !e.ctrlKey && !e.altKey && !e.metaKey && (e.code === 'Slash' || e.key === '/'));
         if (isSearchShortcut) {
@@ -286,21 +388,21 @@ function initAppEvents() {
             return;
         }
 
-        // 3. Switch View: Alt + V, or V when outside inputs (Replaces Ctrl+Shift+V which collided with paste)
+        // 3. Switch View: Alt + V or V
         const isSwitchViewShortcut = (e.altKey && (e.code === 'KeyV' || e.key?.toLowerCase() === 'v'))
             || (!isInput && !e.ctrlKey && !e.altKey && !e.metaKey && (e.code === 'KeyV' || e.key?.toLowerCase() === 'v'));
         if (isSwitchViewShortcut) {
             e.preventDefault();
-            const views = ['grid', 'table', 'timeline', 'kanban'];
+            const views = ['grid', 'calendar', 'timeline', 'kanban'];
             const nextIdx = (views.indexOf(AppState.currentView) + 1) % views.length;
             switchView(views[nextIdx]);
             return;
         }
 
-        // 4. Quick Number Keys 1-4 for Direct View Switching (when outside inputs)
+        // 4. Quick Direct View Keys (1: Grid, 2: Calendar, 3: Timeline, 4: Kanban)
         if (!isInput && !e.ctrlKey && !e.altKey && !e.metaKey) {
             if (e.code === 'Digit1' || e.key === '1') { e.preventDefault(); switchView('grid'); }
-            else if (e.code === 'Digit2' || e.key === '2') { e.preventDefault(); switchView('table'); }
+            else if (e.code === 'Digit2' || e.key === '2') { e.preventDefault(); switchView('calendar'); }
             else if (e.code === 'Digit3' || e.key === '3') { e.preventDefault(); switchView('timeline'); }
             else if (e.code === 'Digit4' || e.key === '4') { e.preventDefault(); switchView('kanban'); }
             else if (e.code === 'Comma' || e.key === ',') { e.preventDefault(); openBackupModal(); }
@@ -323,6 +425,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     try { initSubjectModalEvents(); } catch (e) { console.error('[App] initSubjectModalEvents error:', e); }
     try { initFolderModalEvents(); } catch (e) { console.error('[App] initFolderModalEvents error:', e); }
     try { initBackupModalEvents(); } catch (e) { console.error('[App] initBackupModalEvents error:', e); }
+    try { initTrashModalEvents(); } catch (e) { console.error('[App] initTrashModalEvents error:', e); }
     try { initAiModalEvents(); } catch (e) { console.error('[App] initAiModalEvents error:', e); }
     try { initQuickAiVoiceEvents(); } catch (e) { console.error('[App] initQuickAiVoiceEvents error:', e); }
     try { initAppEvents(); } catch (e) { console.error('[App] initAppEvents error:', e); }

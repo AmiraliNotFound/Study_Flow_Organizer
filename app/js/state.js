@@ -1,18 +1,21 @@
 /**
- * Central Reactive State Store & Data Normalization
+ * Central Reactive State Store, Data Normalization & Soft-Delete Trash Hub
  */
 
 import { saveData } from './api.js';
 import { formatDualDate } from './jalali.js';
+import { DYNAMIC_SUBJECT_GRADIENTS } from './theme.js';
 
-export const SUBJECT_GRADIENTS = [
-    { name: "Stormy Teal", css: "linear-gradient(135deg, #1d2d2c 0%, #197278 100%)", primary: "#197278" },
-    { name: "Dark Slate", css: "linear-gradient(135deg, #1f2f2e 0%, #283D3B 50%, #3a5552 100%)", primary: "#283D3B" },
-    { name: "Tomato Jam", css: "linear-gradient(135deg, #441814 0%, #772E25 50%, #C44536 100%)", primary: "#C44536" },
-    { name: "Chestnut Earth", css: "linear-gradient(135deg, #2c120e 0%, #772E25 100%)", primary: "#772E25" },
-    { name: "Teal Petal", css: "linear-gradient(135deg, #197278 0%, #2b5755 60%, #466e6b 100%)", primary: "#197278" },
-    { name: "Slate Terracotta", css: "linear-gradient(135deg, #283D3B 0%, #523733 50%, #C44536 100%)", primary: "#C44536" }
-];
+// Getter for backward-compatibility with code that references SUBJECT_GRADIENTS
+export const SUBJECT_GRADIENTS = new Proxy([], {
+    get(target, prop) {
+        if (prop === 'length') return DYNAMIC_SUBJECT_GRADIENTS.length;
+        if (typeof prop === 'string' && !isNaN(Number(prop))) {
+            return DYNAMIC_SUBJECT_GRADIENTS[Number(prop)] || DYNAMIC_SUBJECT_GRADIENTS[0];
+        }
+        return DYNAMIC_SUBJECT_GRADIENTS[prop];
+    }
+});
 
 export const DEFAULT_CONFIG = {
     taskTypes: [
@@ -32,7 +35,8 @@ export const DEFAULT_CONFIG = {
     ],
     materialTypes: [
         { id: "mat_folder", name: "Course Folder", icon: "📁" }
-    ]
+    ],
+    tags: ["Core", "Elective", "Project", "Exam", "Lab"]
 };
 
 export const AppState = {
@@ -41,14 +45,19 @@ export const AppState = {
     subjects: [],
     items: [],
     materials: [],
+    trash: {
+        subjects: [],
+        items: [],
+        materials: []
+    },
 
-    currentView: 'grid', // 'grid' | 'table' | 'timeline'
+    currentView: 'grid', // 'grid' | 'calendar' | 'timeline' | 'kanban'
     activeFilter: 'all',  // 'all' | 'only_tasks' | 'only_events' | 'urgent' | 'pending' | 'completed'
+    activeTagFilter: 'all', // 'all' or specific tag name
     searchQuery: '',
 
     cardSubTabs: {}, // subjectId -> 'schedule' | 'folders'
     expandedGridSubjectTasks: new Set(),
-    expandedTableSubjectIds: new Set(),
     isServerActive: false
 };
 
@@ -78,17 +87,32 @@ export function normalizeData(raw) {
         eventTypes: Array.isArray(raw.config?.eventTypes) && raw.config.eventTypes.length > 0
             ? raw.config.eventTypes.map(t => ({ ...t }))
             : JSON.parse(JSON.stringify(DEFAULT_CONFIG.eventTypes)),
-        materialTypes: [{ id: "mat_folder", name: "Course Folder", icon: "📁" }]
+        materialTypes: [{ id: "mat_folder", name: "Course Folder", icon: "📁" }],
+        tags: Array.isArray(raw.config?.tags) && raw.config.tags.length > 0
+            ? [...new Set(raw.config.tags)]
+            : [...DEFAULT_CONFIG.tags]
     };
 
-    const subjects = Array.isArray(raw.subjects) ? raw.subjects.map(s => ({
+    const subjects = Array.isArray(raw.subjects) ? raw.subjects.map((s, idx) => ({
         id: s.id || `subj_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
         title: s.title || "Subject",
         code: s.code || "",
-        gradientIndex: typeof s.gradientIndex === 'number' ? s.gradientIndex : Math.floor(Math.random() * SUBJECT_GRADIENTS.length),
+        tags: Array.isArray(s.tags) ? s.tags : [],
+        isPinned: Boolean(s.isPinned),
+        order: typeof s.order === 'number' ? s.order : idx,
+        gradientIndex: typeof s.gradientIndex === 'number' ? s.gradientIndex : Math.floor(Math.random() * 6),
         createdAt: s.createdAt || new Date().toISOString(),
         ...s
     })) : [];
+
+    // Ensure tags in subjects are added to config tags
+    subjects.forEach(s => {
+        if (Array.isArray(s.tags)) {
+            s.tags.forEach(t => {
+                if (t && !config.tags.includes(t)) config.tags.push(t);
+            });
+        }
+    });
 
     const rawItems = Array.isArray(raw.items) ? raw.items : (Array.isArray(raw.tasks) ? raw.tasks : []);
     const items = rawItems.map(item => {
@@ -126,10 +150,17 @@ export function normalizeData(raw) {
         createdAt: mat.createdAt || new Date().toISOString()
     }));
 
+    const rawTrash = raw.trash || {};
+    const trash = {
+        subjects: Array.isArray(rawTrash.subjects) ? rawTrash.subjects : [],
+        items: Array.isArray(rawTrash.items) ? rawTrash.items : [],
+        materials: Array.isArray(rawTrash.materials) ? rawTrash.materials : []
+    };
+
     return {
         $schema: "StudyFlowOrganizer_v4",
         metadata: {
-            version: "4.0.0",
+            version: "4.2.0",
             appName: "Study Flow Organizer",
             lastSaved: raw.metadata?.lastSaved || new Date().toISOString(),
             language: "en"
@@ -138,7 +169,8 @@ export function normalizeData(raw) {
         config,
         subjects,
         items,
-        materials
+        materials,
+        trash
     };
 }
 
@@ -151,6 +183,7 @@ export function setAppStateData(rawData) {
     AppState.subjects = normalized.subjects;
     AppState.items = normalized.items;
     AppState.materials = normalized.materials;
+    AppState.trash = normalized.trash;
     AppState.user = normalized.user;
     notify('data-loaded');
 }
@@ -162,7 +195,7 @@ export async function persistCurrentState() {
     const payload = {
         $schema: "StudyFlowOrganizer_v4",
         metadata: {
-            version: "4.0.0",
+            version: "4.2.0",
             appName: "Study Flow Organizer",
             lastSaved: new Date().toISOString(),
             language: "en"
@@ -171,7 +204,8 @@ export async function persistCurrentState() {
         config: AppState.config,
         subjects: AppState.subjects,
         items: AppState.items,
-        materials: AppState.materials
+        materials: AppState.materials,
+        trash: AppState.trash
     };
     const result = await saveData(payload);
     notify('data-saved');
@@ -191,6 +225,9 @@ export async function addOrUpdateSubject(subjData) {
             finalSubj = {
                 title: subjData.title,
                 code: subjData.code || "",
+                tags: Array.isArray(subjData.tags) ? subjData.tags : [],
+                isPinned: Boolean(subjData.isPinned),
+                order: AppState.subjects.length,
                 gradientIndex: typeof subjData.gradientIndex === 'number' ? subjData.gradientIndex : 0,
                 createdAt: subjData.createdAt || new Date().toISOString(),
                 ...subjData
@@ -202,21 +239,130 @@ export async function addOrUpdateSubject(subjData) {
             id: `subj_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
             title: subjData.title,
             code: subjData.code || "",
+            tags: Array.isArray(subjData.tags) ? subjData.tags : [],
+            isPinned: Boolean(subjData.isPinned),
+            order: AppState.subjects.length,
             gradientIndex: typeof subjData.gradientIndex === 'number' ? subjData.gradientIndex : 0,
             createdAt: new Date().toISOString(),
             ...subjData
         };
         AppState.subjects.push(finalSubj);
     }
+
+    // Register any new tags into config.tags
+    if (Array.isArray(finalSubj.tags)) {
+        finalSubj.tags.forEach(tag => {
+            if (tag && !AppState.config.tags.includes(tag)) {
+                AppState.config.tags.push(tag);
+            }
+        });
+    }
+
     await persistCurrentState();
     return finalSubj;
 }
 
+/**
+ * Soft delete: moves course, items, and materials to trash
+ */
 export async function deleteSubject(subjectId) {
+    const subj = AppState.subjects.find(s => s.id === subjectId);
+    if (!subj) return null;
+
+    const deletedAt = new Date().toISOString();
+    const trashedSubj = { ...subj, deletedAt };
+    const trashedItems = AppState.items.filter(i => i.subjectId === subjectId).map(i => ({ ...i, deletedAt }));
+    const trashedMaterials = AppState.materials.filter(m => m.subjectId === subjectId).map(m => ({ ...m, deletedAt }));
+
+    if (!AppState.trash) {
+        AppState.trash = { subjects: [], items: [], materials: [] };
+    }
+    AppState.trash.subjects.push(trashedSubj);
+    AppState.trash.items.push(...trashedItems);
+    AppState.trash.materials.push(...trashedMaterials);
+
     AppState.subjects = AppState.subjects.filter(s => s.id !== subjectId);
     AppState.items = AppState.items.filter(i => i.subjectId !== subjectId);
     AppState.materials = AppState.materials.filter(m => m.subjectId !== subjectId);
+
     await persistCurrentState();
+    return trashedSubj;
+}
+
+/**
+ * Restores a course and its associated items and materials from trash
+ */
+export async function restoreSubject(subjectId) {
+    if (!AppState.trash) return;
+    const subjIdx = AppState.trash.subjects.findIndex(s => s.id === subjectId);
+    if (subjIdx === -1) return;
+
+    const [subj] = AppState.trash.subjects.splice(subjIdx, 1);
+    delete subj.deletedAt;
+    subj.order = AppState.subjects.length;
+    AppState.subjects.push(subj);
+
+    const restoredItems = AppState.trash.items.filter(i => i.subjectId === subjectId);
+    AppState.trash.items = AppState.trash.items.filter(i => i.subjectId !== subjectId);
+    restoredItems.forEach(i => { delete i.deletedAt; AppState.items.push(i); });
+
+    const restoredMaterials = AppState.trash.materials.filter(m => m.subjectId === subjectId);
+    AppState.trash.materials = AppState.trash.materials.filter(m => m.subjectId !== subjectId);
+    restoredMaterials.forEach(m => { delete m.deletedAt; AppState.materials.push(m); });
+
+    await persistCurrentState();
+    return subj;
+}
+
+/**
+ * Permanently removes a course and all its items from trash
+ */
+export async function permanentlyDeleteSubject(subjectId) {
+    if (!AppState.trash) return;
+    AppState.trash.subjects = AppState.trash.subjects.filter(s => s.id !== subjectId);
+    AppState.trash.items = AppState.trash.items.filter(i => i.subjectId !== subjectId);
+    AppState.trash.materials = AppState.trash.materials.filter(m => m.subjectId !== subjectId);
+    await persistCurrentState();
+}
+
+/**
+ * Clears all items in the trash
+ */
+export async function emptyTrash() {
+    AppState.trash = { subjects: [], items: [], materials: [] };
+    await persistCurrentState();
+}
+
+/**
+ * Toggle pin status of a subject
+ */
+export async function togglePinSubject(subjectId) {
+    const subj = AppState.subjects.find(s => s.id === subjectId);
+    if (subj) {
+        subj.isPinned = !subj.isPinned;
+        await persistCurrentState();
+    }
+}
+
+/**
+ * Reorder subjects array and persist
+ */
+export async function reorderSubjects(reorderedList) {
+    AppState.subjects = reorderedList.map((s, idx) => ({ ...s, order: idx }));
+    await persistCurrentState();
+}
+
+/**
+ * Add a new tag to the global config
+ */
+export async function addGlobalTag(tagName) {
+    const clean = tagName.trim();
+    if (!clean) return;
+    if (!AppState.config.tags) AppState.config.tags = [];
+    if (!AppState.config.tags.includes(clean)) {
+        AppState.config.tags.push(clean);
+        await persistCurrentState();
+    }
 }
 
 export async function addOrUpdateItem(itemData) {
@@ -307,17 +453,27 @@ export function doesSubjectMatchQuery(subj, query) {
     if (!subj) return false;
     if (!query || !query.trim()) return true;
     const tokens = query.toLowerCase().trim().split(/\s+/).filter(Boolean);
-    const corpus = `${subj.title || ''} ${subj.code || ''} ${subj.instructor || ''}`.toLowerCase();
+    const tagsStr = Array.isArray(subj.tags) ? subj.tags.join(' ') : '';
+    const corpus = `${subj.title || ''} ${subj.code || ''} ${subj.instructor || ''} ${tagsStr}`.toLowerCase();
     return tokens.every(token => corpus.includes(token));
 }
 
 /**
- * Filter items according to search query and active filter pill.
- * Features multi-token matching across item title, course title/code/instructor,
- * type name, kind, notes, location, and formatted Gregorian + Shamsi dates.
+ * Filter items according to search query, active status filter, and tag filter
  */
 export function getFilteredItems() {
     let result = [...AppState.items];
+
+    // Filter by tag if selected
+    if (AppState.activeTagFilter && AppState.activeTagFilter !== 'all') {
+        const tag = AppState.activeTagFilter.toLowerCase();
+        const matchingSubjectIds = new Set(
+            AppState.subjects
+                .filter(s => Array.isArray(s.tags) && s.tags.some(t => t.toLowerCase() === tag))
+                .map(s => s.id)
+        );
+        result = result.filter(i => matchingSubjectIds.has(i.subjectId));
+    }
 
     // Filter by type / status
     if (AppState.activeFilter === 'only_tasks') {
@@ -347,6 +503,7 @@ export function getFilteredItems() {
             const courseTitle = subj ? subj.title : '';
             const courseCode = subj ? (subj.code || '') : '';
             const instructor = subj ? (subj.instructor || '') : '';
+            const tags = subj && Array.isArray(subj.tags) ? subj.tags.join(' ') : '';
 
             let dateInfo = '';
             if (item.dueDate) {
@@ -365,12 +522,12 @@ export function getFilteredItems() {
                 courseTitle,
                 courseCode,
                 instructor,
+                tags,
                 dateInfo,
                 item.extraInfo?.notes || '',
                 item.extraInfo?.location || ''
             ].join(' ').toLowerCase();
 
-            // All tokens must be present in this item's corpus
             return tokens.every(token => corpus.includes(token));
         });
     }

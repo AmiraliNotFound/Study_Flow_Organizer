@@ -1,11 +1,12 @@
 /**
- * Add / Edit Subject Modal Controller
+ * Add / Edit Subject Modal Controller with Tagging & Soft-Delete Trash Support
  */
 
 import { AppState, SUBJECT_GRADIENTS, addOrUpdateSubject, deleteSubject } from '../state.js';
 
 let activeSubjectId = null;
 let selectedGradientIndex = 0;
+let currentTags = [];
 
 export function openSubjectModal(subjectId = null) {
     const modal = document.getElementById('subjectModal');
@@ -17,7 +18,10 @@ export function openSubjectModal(subjectId = null) {
     form.reset();
 
     const btnDelete = document.getElementById('btnDeleteSubject');
-    if (btnDelete) btnDelete.classList.toggle('hidden', !subjectId);
+    if (btnDelete) {
+        btnDelete.classList.toggle('hidden', !subjectId);
+        btnDelete.textContent = '🗑️ Move to Trash';
+    }
 
     if (subjectId) {
         const subj = AppState.subjects.find(s => s.id === subjectId);
@@ -26,13 +30,16 @@ export function openSubjectModal(subjectId = null) {
             document.getElementById('subjectNameInput').value = subj.title;
             document.getElementById('subjectCodeInput').value = subj.code || '';
             selectedGradientIndex = subj.gradientIndex || 0;
+            currentTags = Array.isArray(subj.tags) ? [...subj.tags] : [];
         }
     } else {
         modalTitle.textContent = 'Create New Subject';
         selectedGradientIndex = Math.floor(Math.random() * SUBJECT_GRADIENTS.length);
+        currentTags = [];
     }
 
     renderGradientPicker();
+    renderTagsEditor();
     modal.classList.add('is-active');
 }
 
@@ -40,6 +47,7 @@ export function closeSubjectModal() {
     const modal = document.getElementById('subjectModal');
     if (modal) modal.classList.remove('is-active');
     activeSubjectId = null;
+    currentTags = [];
 }
 
 function renderGradientPicker() {
@@ -66,6 +74,85 @@ function renderGradientPicker() {
     });
 }
 
+function renderTagsEditor() {
+    const container = document.getElementById('subjectTagsContainer');
+    if (!container) return;
+    container.innerHTML = '';
+
+    const wrap = document.createElement('div');
+    wrap.className = 'tags-editor-box';
+
+    // Current assigned tags
+    const activeTagsRow = document.createElement('div');
+    activeTagsRow.className = 'assigned-tags-row';
+
+    if (currentTags.length === 0) {
+        activeTagsRow.innerHTML = `<span style="font-size: 0.76rem; color: var(--text-muted); font-style: italic;">No tags assigned</span>`;
+    } else {
+        currentTags.forEach(tag => {
+            const pill = document.createElement('span');
+            pill.className = 'editor-tag-pill';
+            pill.innerHTML = `<span>#${tag}</span><button type="button" class="btn-tag-remove">&times;</button>`;
+            pill.querySelector('.btn-tag-remove').addEventListener('click', () => {
+                currentTags = currentTags.filter(t => t !== tag);
+                renderTagsEditor();
+            });
+            activeTagsRow.appendChild(pill);
+        });
+    }
+    wrap.appendChild(activeTagsRow);
+
+    // Input to add tag
+    const inputRow = document.createElement('div');
+    inputRow.className = 'tags-input-row';
+    inputRow.innerHTML = `
+        <input type="text" id="newTagInput" class="form-input form-input-sm" placeholder="New tag name (press Enter)...">
+        <button type="button" class="btn btn-secondary btn-sm" id="btnAddNewTag">Add Tag</button>
+    `;
+
+    const addTagFn = () => {
+        const input = inputRow.querySelector('#newTagInput');
+        const val = (input?.value || '').trim().replace(/^#+/, '');
+        if (val && !currentTags.includes(val)) {
+            currentTags.push(val);
+            renderTagsEditor();
+        }
+        if (input) input.value = '';
+    };
+
+    inputRow.querySelector('#btnAddNewTag').addEventListener('click', addTagFn);
+    inputRow.querySelector('#newTagInput').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            addTagFn();
+        }
+    });
+    wrap.appendChild(inputRow);
+
+    // Quick tag suggestions from global config
+    const availableTags = (AppState.config.tags || []).filter(t => !currentTags.includes(t));
+    if (availableTags.length > 0) {
+        const suggestionsRow = document.createElement('div');
+        suggestionsRow.className = 'tags-suggestions-row';
+        suggestionsRow.innerHTML = `<span style="font-size: 0.72rem; color: var(--text-muted);">Suggestions:</span>`;
+
+        availableTags.forEach(tag => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'btn-tag-suggestion';
+            btn.textContent = `+ #${tag}`;
+            btn.addEventListener('click', () => {
+                currentTags.push(tag);
+                renderTagsEditor();
+            });
+            suggestionsRow.appendChild(btn);
+        });
+        wrap.appendChild(suggestionsRow);
+    }
+
+    container.appendChild(wrap);
+}
+
 export function initSubjectModalEvents() {
     document.getElementById('subjectModalCloseBtn')?.addEventListener('click', closeSubjectModal);
     document.getElementById('btnCancelSubject')?.addEventListener('click', closeSubjectModal);
@@ -73,7 +160,7 @@ export function initSubjectModalEvents() {
     document.getElementById('btnDeleteSubject')?.addEventListener('click', async () => {
         if (!activeSubjectId) return;
         const subj = AppState.subjects.find(s => s.id === activeSubjectId);
-        if (subj && confirm(`Delete "${subj.title}" and all its scheduled tasks/events?`)) {
+        if (subj && confirm(`Move "${subj.title}" to Trash? (You can restore it anytime)`)) {
             await deleteSubject(activeSubjectId);
             closeSubjectModal();
         }
@@ -93,6 +180,7 @@ export function initSubjectModalEvents() {
             id: activeSubjectId,
             title,
             code,
+            tags: currentTags,
             gradientIndex: selectedGradientIndex
         });
 

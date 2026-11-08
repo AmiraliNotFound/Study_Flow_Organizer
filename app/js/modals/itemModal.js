@@ -17,7 +17,7 @@ let subjectSelect = null;
 let datePicker = null;
 let timePicker = null;
 
-export function openItemModal(itemId = null, preselectedSubjectId = null, defaultKind = 'task') {
+export function openItemModal(itemId = null, preselectedSubjectId = null, defaultKind = 'task', initialDueDate = null) {
     const modal = document.getElementById('itemModal');
     if (!modal) return;
 
@@ -74,9 +74,9 @@ export function openItemModal(itemId = null, preselectedSubjectId = null, defaul
         document.getElementById('itemSubjectSelect').value = targetSubjId;
 
         // Default: Tomorrow at 23:59
-        const tomorrow = getDatePreset(1, 23, 59);
+        const tomorrow = initialDueDate ? new Date(initialDueDate) : getDatePreset(1, 23, 59);
         if (datePicker) datePicker.setDate(tomorrow, false);
-        if (timePicker) timePicker.setTime(23, 59, false);
+        if (timePicker) timePicker.setTime(tomorrow.getHours() || 23, tomorrow.getMinutes() || 59, false);
     }
 
     setKind(activeKind);

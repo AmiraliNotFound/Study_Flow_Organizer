@@ -31,7 +31,7 @@ An intelligent, privacy-first, 100% offline-capable academic workspace, deadline
 
 ### 2. 📑 4 High-Density Productivity Views
 * **Cards Grid View**: Course cards with progress indicators, upcoming deadline badges, and expandable task/event drawers.
-* **Courses & Schedule Matrix (Table View)**: High-density schedule matrix with inline subject editing, countdown chips, and expandable course accordions.
+* **Academic Calendar View**: Monthly dual-calendar (Gregorian & Shamsi) grid with course-colored milestone chips, today indicator, and single-click quick scheduling.
 * **Proportional Timeline View**: Milestones where vertical spacing scales proportionally to actual elapsed time between deadlines.
 * **Kanban Board**: Visual workflow board with columns for *To Do*, *In Progress*, *Done*, and *Overdue* with quick action transitions.
 
@@ -91,7 +91,7 @@ Study_Flow_Organizer/
 │   │   ├── variables.css             # Color tokens, accent themes & glassmorphism variables
 │   │   ├── base.css                  # CSS reset, typography, utility classes, buttons
 │   │   ├── components.css            # Header, toolbar, search, filter pills, stats, toasts
-│   │   ├── views.css                 # Cards grid, table matrix, timeline & kanban styles
+│   │   ├── views.css                 # Cards grid, calendar, timeline & kanban styles
 │   │   ├── modals.css                # Modal dialog overlays, AI modal & form styles
 │   │   └── custom-controls.css       # Custom date/time pickers & dropdown controls
 │   │
@@ -102,6 +102,7 @@ Study_Flow_Organizer/
 │       ├── dateUtils.js              # Gregorian ISO-8601 formatting, countdowns & urgency engine
 │       ├── jalali.js                 # Solar Hijri (Shamsi) astronomical conversion & formatting
 │       ├── markdown.js               # Lightweight markdown parser & interactive checklist renderer
+│       ├── theme.js                  # Dynamic palette engine (Minimal Black, Dark Blue, Custom 5-Color)
 │       │
 │       ├── components/               # Custom UI Components
 │       │   ├── customDatePicker.js   # Dual Gregorian/Jalali date picker
@@ -115,7 +116,7 @@ Study_Flow_Organizer/
 │       │
 │       ├── views/                    # Dynamic View Renderers
 │       │   ├── cardsView.js          # Course cards grid & expandable task drawer
-│       │   ├── tableView.js          # High-density schedule matrix
+│       │   ├── calendarView.js       # Monthly academic calendar with dual date displays
 │       │   ├── timelineView.js       # Chronological proportional timeline
 │       │   └── kanbanView.js         # Interactive 4-column kanban board
 │       │
@@ -124,6 +125,7 @@ Study_Flow_Organizer/
 │           ├── subjectModal.js       # Course subject create/edit dialog
 │           ├── folderModal.js        # Native Windows folder linking dialog
 │           ├── backupModal.js        # Settings, theme, backups & storage management
+│           ├── trashModal.js         # Soft-delete course trash bin & recovery controller
 │           └── aiModal.js            # AI schedule assistant modal & preview diff cards
 │
 ├── data/                             # Academic Database & Backups
@@ -236,8 +238,8 @@ cargo tauri build
 | :--- | :--- | :--- |
 | `Space` (Hold) | Global (outside text fields) | **Push-and-Hold AI Voice**: speak your deadline command |
 | `Alt + A` | Global | Open AI Schedule Assistant dialog |
-| `Ctrl + N` | Global | Open **New Task / Event** creation modal |
-| `Ctrl + Shift + V` | Global | Cycle between **Cards**, **Matrix Table**, **Timeline**, and **Kanban** views |
+| `Alt + N` or `N` | Global (outside text fields) | Open **New Task / Event** creation modal |
+| `Alt + V` or `1, 2, 3, 4` | Global (outside text fields) | Switch between **Cards**, **Calendar**, **Timeline**, and **Kanban** views |
 | `/` or `Ctrl + F` | Global | Focus the global search bar |
 | `Escape` | Global | Close any active modal dialog or dropdown |
 
