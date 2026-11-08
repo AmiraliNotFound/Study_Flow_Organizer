@@ -2,7 +2,9 @@
  * Add / Edit Subject Modal Controller with Tagging & Soft-Delete Trash Support
  */
 
-import { AppState, SUBJECT_GRADIENTS, addOrUpdateSubject, deleteSubject } from '../state.js';
+import { AppState, SUBJECT_GRADIENTS, addOrUpdateSubject, deleteSubject, restoreSubject } from '../state.js';
+import { ICONS } from '../icons.js';
+import { showToast, confirmAction } from '../toast.js';
 
 let activeSubjectId = null;
 let selectedGradientIndex = 0;
@@ -20,7 +22,7 @@ export function openSubjectModal(subjectId = null) {
     const btnDelete = document.getElementById('btnDeleteSubject');
     if (btnDelete) {
         btnDelete.classList.toggle('hidden', !subjectId);
-        btnDelete.textContent = '🗑️ Move to Trash';
+        btnDelete.innerHTML = `${ICONS.trash} Move to Trash`;
     }
 
     if (subjectId) {
@@ -157,13 +159,29 @@ export function initSubjectModalEvents() {
     document.getElementById('subjectModalCloseBtn')?.addEventListener('click', closeSubjectModal);
     document.getElementById('btnCancelSubject')?.addEventListener('click', closeSubjectModal);
 
-    document.getElementById('btnDeleteSubject')?.addEventListener('click', async () => {
+    document.getElementById('btnDeleteSubject')?.addEventListener('click', () => {
         if (!activeSubjectId) return;
         const subj = AppState.subjects.find(s => s.id === activeSubjectId);
-        if (subj && confirm(`Move "${subj.title}" to Trash? (You can restore it anytime)`)) {
-            await deleteSubject(activeSubjectId);
-            closeSubjectModal();
-        }
+        if (!subj) return;
+
+        confirmAction({
+            message: `Move "${subj.title}" to Trash? (You can restore it anytime)`,
+            confirmText: 'Move to Trash',
+            isDanger: true,
+            onConfirm: async () => {
+                await deleteSubject(activeSubjectId);
+                closeSubjectModal();
+                showToast({
+                    message: `"${subj.title}" moved to trash`,
+                    type: 'delete',
+                    actionText: 'Undo',
+                    onAction: async () => {
+                        await restoreSubject(subj.id);
+                        showToast({ message: `"${subj.title}" restored`, type: 'success' });
+                    }
+                });
+            }
+        });
     });
 
     document.getElementById('subjectForm')?.addEventListener('submit', async (e) => {
@@ -172,7 +190,7 @@ export function initSubjectModalEvents() {
         const code = document.getElementById('subjectCodeInput').value.trim();
 
         if (!title) {
-            alert('Subject name is required');
+            showToast({ message: 'Subject title is required', type: 'error' });
             return;
         }
 
@@ -185,5 +203,6 @@ export function initSubjectModalEvents() {
         });
 
         closeSubjectModal();
+        showToast({ message: `Course "${title}" saved successfully`, type: 'success' });
     });
 }

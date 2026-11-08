@@ -20,7 +20,7 @@
     align-items: center;
     justify-content: space-between;
     padding: 10px 14px;
-    background: rgba(40, 61, 59, 0.85);
+    background: var(--card-surface);
     border: 1px solid rgba(237, 221, 212, 0.16);
     border-radius: var(--radius-sm);
     color: var(--text-primary);
@@ -125,7 +125,7 @@
 }
 
 .custom-select-option:hover {
-    background: rgba(25, 114, 120, 0.25);
+    background: var(--color-primary-subtle);
     color: var(--text-primary);
 }
 
@@ -187,7 +187,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(40, 61, 59, 0.9);
+    background: var(--card-surface);
     border: 1px solid rgba(237, 221, 212, 0.16);
     border-radius: 8px;
     color: var(--text-primary);
@@ -252,7 +252,7 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    background: rgba(40, 61, 59, 0.5);
+    background: var(--card-surface-glass);
     border: 1px solid rgba(237, 221, 212, 0.08);
     border-radius: 8px;
     cursor: pointer;
@@ -261,7 +261,7 @@
 }
 
 .cal-day-cell:hover {
-    background: rgba(25, 114, 120, 0.3);
+    background: var(--color-primary-subtle);
     border-color: var(--palette-stormy-teal);
 }
 
@@ -305,8 +305,8 @@
     gap: 8px;
     margin-top: 10px;
     padding: 8px 12px;
-    background: rgba(25, 114, 120, 0.15);
-    border: 1px solid rgba(25, 114, 120, 0.35);
+    background: var(--color-primary-subtle);
+    border: 1px solid var(--color-primary-subtle);
     border-radius: 8px;
     font-size: 0.8rem;
     color: var(--palette-powder-petal);
@@ -357,7 +357,7 @@
 
 .time-preset-pill {
     padding: 3px 8px;
-    background: rgba(40, 61, 59, 0.8);
+    background: var(--card-surface-glass);
     border: 1px solid rgba(237, 221, 212, 0.14);
     border-radius: 6px;
     font-size: 0.72rem;
@@ -392,7 +392,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(40, 61, 59, 0.9);
+    background: var(--card-surface);
     border: 1px solid rgba(237, 221, 212, 0.16);
     border-radius: 6px;
     color: var(--palette-powder-petal);
@@ -496,7 +496,7 @@
 }
 
 .dropdown-item:hover {
-    background: rgba(25, 114, 120, 0.25);
+    background: var(--color-primary-subtle);
 }
 
 .dropdown-item .item-icon {
@@ -532,7 +532,7 @@
     align-items: center;
     gap: 8px;
     padding: 7px 14px;
-    background: rgba(40, 61, 59, 0.85);
+    background: var(--card-surface);
     border: 1px solid rgba(237, 221, 212, 0.16);
     border-radius: 10px;
     color: var(--palette-powder-petal);
@@ -578,7 +578,7 @@
 }
 
 .view-menu-item:hover {
-    background: rgba(25, 114, 120, 0.25);
+    background: var(--color-primary-subtle);
     color: var(--palette-powder-petal);
 }
 

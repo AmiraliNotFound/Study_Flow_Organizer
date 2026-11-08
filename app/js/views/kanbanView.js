@@ -1,12 +1,29 @@
 /**
  * Interactive Kanban Board View Renderer with HTML5 Drag-and-Drop
+ * 
+ * Features:
+ * 1. 4 Workflow Columns: To Do, In Progress, Urgent (<48h), Completed
+ * 2. Drag & Drop between columns updates item status
+ * 3. Soft delete with Toast [Undo] notification (Zero Browser Dialogs)
+ * 4. Zero Hardcoded Colors (Uses Dynamic Theme Custom Properties)
+ * 5. Zero Emojis (100% Vectorized SVG Icons)
  */
 
-import { AppState, SUBJECT_GRADIENTS, getFilteredItems, toggleItemComplete, deleteItem, addOrUpdateItem, persistCurrentState } from '../state.js';
+import {
+    AppState,
+    SUBJECT_GRADIENTS,
+    getFilteredItems,
+    deleteItem,
+    restoreItem,
+    addOrUpdateItem,
+    persistCurrentState
+} from '../state.js';
 import { formatDate, calculateRemainingTime, escapeHtml } from '../dateUtils.js';
 import { renderMarkdown, bindMarkdownChecklists } from '../markdown.js';
 import { openItemModal } from '../modals/itemModal.js';
 import { openSubjectModal } from '../modals/subjectModal.js';
+import { ICONS } from '../icons.js';
+import { showToast } from '../toast.js';
 
 export function renderKanbanView(container) {
     if (!container) return;
@@ -16,12 +33,12 @@ export function renderKanbanView(container) {
 
     if (AppState.subjects.length === 0) {
         container.innerHTML = `
-            <div class="empty-workspace-banner">
-                <div class="empty-icon-circle">📌</div>
+            <div class="empty-workspace-banner view-flow-in">
+                <div class="empty-icon-circle">${ICONS.viewKanban}</div>
                 <h3>No subjects for Kanban board</h3>
                 <p>Create subjects to organize your assignments and milestones into workflow columns.</p>
                 <button type="button" class="btn btn-primary" id="btnEmptyKanbanAddSubj">
-                    ➕ New Subject
+                    ${ICONS.plus} New Subject
                 </button>
             </div>
         `;
@@ -29,35 +46,35 @@ export function renderKanbanView(container) {
         return;
     }
 
-    // Partition items into 4 columns
+    // Partition items into 4 columns using dynamic theme colors
     const now = Date.now();
     const columns = [
         {
             id: 'todo',
             title: 'To Do',
-            icon: '📋',
-            color: '#197278',
+            icon: ICONS.task,
+            color: 'var(--color-primary)',
             items: []
         },
         {
             id: 'in_progress',
             title: 'In Progress',
-            icon: '⏳',
-            color: '#772E25',
+            icon: ICONS.clock,
+            color: 'var(--palette-chestnut)',
             items: []
         },
         {
             id: 'urgent',
             title: 'Urgent (<48h)',
-            icon: '🚨',
-            color: '#C44536',
+            icon: ICONS.alert,
+            color: 'var(--color-urgent)',
             items: []
         },
         {
             id: 'done',
             title: 'Completed',
-            icon: '✅',
-            color: '#2dd4bf',
+            icon: ICONS.checkCircle,
+            color: 'var(--color-success)',
             items: []
         }
     ];
@@ -78,12 +95,12 @@ export function renderKanbanView(container) {
     });
 
     const boardWrap = document.createElement('div');
-    boardWrap.className = 'kanban-board-wrapper';
+    boardWrap.className = 'kanban-board-wrapper view-flow-in';
 
     columns.forEach((col, colIndex) => {
         const colEl = document.createElement('div');
         colEl.className = 'kanban-column view-flow-in';
-        colEl.style.animationDelay = `${colIndex * 0.05}s`;
+        colEl.style.animationDelay = `${colIndex * 0.04}s`;
         colEl.dataset.columnId = col.id;
 
         // Header
@@ -91,13 +108,13 @@ export function renderKanbanView(container) {
         colHeader.className = 'kanban-column-header';
         colHeader.innerHTML = `
             <div style="display: flex; align-items: center; gap: 8px;">
-                <span>${col.icon}</span>
+                <span class="col-icon-svg" style="color: ${col.color};">${col.icon}</span>
                 <span style="font-weight: 700; color: ${col.color};">${col.title}</span>
                 <span class="kanban-count-pill">${col.items.length}</span>
             </div>
             ${col.id !== 'done' ? `
                 <button type="button" class="compact-action-btn btn-kanban-add" title="Add Item">
-                    +
+                    ${ICONS.plus}
                 </button>
             ` : ''}
         `;
@@ -138,6 +155,7 @@ export function renderKanbanView(container) {
             }
 
             await persistCurrentState();
+            renderKanbanView(container);
         });
 
         if (col.items.length === 0) {
@@ -152,10 +170,10 @@ export function renderKanbanView(container) {
                 const isTask = item.kind === 'task';
 
                 const card = document.createElement('div');
-                card.className = `kanban-card view-flow-in ${item.completed ? 'is-completed' : ''} ${!item.completed && remaining.isUrgent ? 'is-urgent' : ''}`;
-                card.style.animationDelay = `${colIndex * 0.05 + cardIndex * 0.03}s`;
+                card.className = `kanban-card ${item.completed ? 'is-completed' : ''} ${!item.completed && remaining.isUrgent ? 'is-urgent' : ''}`;
                 card.draggable = true;
                 card.dataset.itemId = item.id;
+                card.style.animationDelay = `${cardIndex * 0.025}s`;
 
                 card.addEventListener('dragstart', (e) => {
                     e.dataTransfer.setData('text/plain', item.id);
@@ -165,53 +183,35 @@ export function renderKanbanView(container) {
                     card.classList.remove('is-dragging');
                 });
 
-                // Checklists in notes
-                const hasNotes = Boolean(item.extraInfo?.notes && item.extraInfo.notes.trim());
-                const notesMarkdownHtml = hasNotes ? renderMarkdown(item.extraInfo.notes) : '';
-
                 card.innerHTML = `
-                    <div class="kanban-card-top">
-                        <span class="timeline-subject-tag" style="background: ${gradient.css}; font-size: 0.68rem; padding: 1px 7px;">
-                            ${escapeHtml(subj.title)}
-                        </span>
-                        <div style="display: flex; align-items: center; gap: 4px;">
-                            <button type="button" class="compact-action-btn btn-kb-edit" title="Edit">✏️</button>
-                            <button type="button" class="compact-action-btn btn-del btn-kb-del" title="Delete">🗑️</button>
-                        </div>
+                    <div class="kanban-card-subject-tag" style="background: ${gradient.css};">
+                        ${escapeHtml(subj.title)}
                     </div>
-
-                    <div class="kanban-card-title-row">
-                        <div class="compact-checkbox" title="${item.completed ? 'Reopen' : 'Complete'}">
-                            ${item.completed ? '✓' : ''}
-                        </div>
-                        <span class="kanban-card-title" title="${escapeHtml(item.title)}">
-                            ${item.typeIcon || (isTask ? '📋' : '📅')} ${escapeHtml(item.title)}
-                        </span>
+                    <div class="kanban-card-title">${escapeHtml(item.title)}</div>
+                    <div class="kanban-card-meta">
+                        <span><span class="meta-icon">${ICONS.schedule}</span> ${formatted.primaryDisplay}</span>
+                        ${!item.completed ? `<span class="compact-urgency-badge ${remaining.urgencyLevel}">${remaining.friendlyText}</span>` : ''}
                     </div>
-
-                    ${hasNotes ? `
-                        <div class="kanban-notes-preview">
-                            ${notesMarkdownHtml}
-                        </div>
-                    ` : ''}
-
-                    <div class="kanban-card-footer">
-                        <span>🗓️ ${formatted.primaryDisplay}</span>
-                        <span class="compact-urgency-badge ${item.completed ? 'completed' : remaining.urgencyLevel}">
-                            ${item.completed ? 'Done' : remaining.friendlyText}
+                    ${item.extraInfo?.notes ? `<div class="kanban-card-notes">${renderMarkdown(item.extraInfo.notes)}</div>` : ''}
+                    <div class="kanban-card-actions">
+                        <span class="kanban-kind-indicator">
+                            <span class="kind-svg">${isTask ? ICONS.task : ICONS.event}</span>
+                            ${escapeHtml(item.typeName || (isTask ? 'Task' : 'Event'))}
                         </span>
+                        <div style="display: flex; gap: 4px;">
+                            <button type="button" class="compact-action-btn btn-kb-edit" title="Edit Item">
+                                ${ICONS.edit}
+                            </button>
+                            <button type="button" class="compact-action-btn btn-kb-del" title="Delete Item">
+                                ${ICONS.trash}
+                            </button>
+                        </div>
                     </div>
                 `;
 
-                // Bind checkbox
-                card.querySelector('.compact-checkbox').addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    toggleItemComplete(item.id);
-                });
-
-                // Bind interactive markdown checklists
-                if (hasNotes) {
-                    const notesContainer = card.querySelector('.kanban-notes-preview');
+                // Interactive Markdown checklist binding
+                const notesContainer = card.querySelector('.kanban-card-notes');
+                if (notesContainer && item.extraInfo?.notes) {
                     bindMarkdownChecklists(notesContainer, item.extraInfo.notes, async (newMarkdown) => {
                         item.extraInfo.notes = newMarkdown;
                         await addOrUpdateItem(item);
@@ -223,9 +223,20 @@ export function renderKanbanView(container) {
                     openItemModal(item.id);
                 });
 
-                card.querySelector('.btn-kb-del').addEventListener('click', (e) => {
+                card.querySelector('.btn-kb-del').addEventListener('click', async (e) => {
                     e.stopPropagation();
-                    if (confirm(`Delete "${item.title}"?`)) deleteItem(item.id);
+                    const trashed = await deleteItem(item.id);
+                    renderKanbanView(container);
+                    showToast({
+                        message: `"${item.title}" moved to trash`,
+                        type: 'delete',
+                        actionText: 'Undo',
+                        onAction: async () => {
+                            await restoreItem(trashed.id);
+                            renderKanbanView(container);
+                            showToast({ message: `"${item.title}" restored`, type: 'success' });
+                        }
+                    });
                 });
 
                 cardsList.appendChild(card);

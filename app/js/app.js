@@ -13,6 +13,7 @@ import { renderCardsView } from './views/cardsView.js';
 import { renderCalendarView } from './views/calendarView.js';
 import { renderTimelineView } from './views/timelineView.js';
 import { renderKanbanView } from './views/kanbanView.js';
+import { ICONS } from './icons.js';
 
 import { openItemModal, initItemModalEvents } from './modals/itemModal.js';
 import { openSubjectModal, initSubjectModalEvents } from './modals/subjectModal.js';
@@ -147,10 +148,10 @@ function updateDiskFileBadge() {
 
 // View switcher metadata (Matrix view removed, Calendar view added - Req 5 & Req 8)
 const VIEW_METADATA = {
-    grid: { label: 'Cards View', icon: '🗂️' },
-    calendar: { label: 'Calendar View', icon: '📅' },
-    timeline: { label: 'Timeline View', icon: '⏳' },
-    kanban: { label: 'Kanban Board', icon: '📌' }
+    grid: { label: 'Cards View', icon: ICONS.viewCards },
+    calendar: { label: 'Calendar View', icon: ICONS.viewCalendar },
+    timeline: { label: 'Timeline View', icon: ICONS.viewTimeline },
+    kanban: { label: 'Kanban Board', icon: ICONS.viewKanban }
 };
 
 function switchView(viewName) {
@@ -159,7 +160,7 @@ function switchView(viewName) {
 
     const activeIcon = document.getElementById('activeViewIcon');
     const activeLabel = document.getElementById('activeViewLabel');
-    if (activeIcon) activeIcon.textContent = VIEW_METADATA[viewName].icon;
+    if (activeIcon) activeIcon.innerHTML = VIEW_METADATA[viewName].icon;
     if (activeLabel) activeLabel.textContent = VIEW_METADATA[viewName].label;
 
     document.querySelectorAll('.view-menu-item').forEach(btn => {
@@ -430,7 +431,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     try { initQuickAiVoiceEvents(); } catch (e) { console.error('[App] initQuickAiVoiceEvents error:', e); }
     try { initAppEvents(); } catch (e) { console.error('[App] initAppEvents error:', e); }
 
-    subscribe(() => {
+    subscribe((state, eventName) => {
+        if (eventName === 'item-toggled' || eventName === 'silent') return;
         renderActiveView();
     });
 

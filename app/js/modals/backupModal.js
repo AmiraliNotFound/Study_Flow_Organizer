@@ -8,6 +8,7 @@ import { getAiConfig, saveAiConfig, fetchAiModels } from '../services/aiService.
 import { CustomSelect } from '../components/customSelect.js';
 import { applyPalette, getActivePaletteId, getSavedCustomColors } from '../theme.js';
 import { openTrashModal } from './trashModal.js';
+import { showToast, confirmAction } from '../toast.js';
 
 let aiProviderCustomSelect = null;
 let aiModelCustomSelect = null;
@@ -22,7 +23,7 @@ export async function openBackupModal() {
     const dataDirText = document.getElementById('modalDataDirText');
 
     if (isConnected) {
-        if (statusDot) statusDot.style.background = '#2dd4bf';
+        if (statusDot) statusDot.style.background = 'var(--color-success)';
         if (statusText) statusText.textContent = '🟢 Connected to standard AppData directory on disk';
         try {
             const res = await fetch('/api/health');
@@ -176,7 +177,7 @@ export function initBackupModalEvents() {
         try {
             await fetch('/api/open-data-dir', { method: 'POST' });
         } catch (e) {
-            alert('Could not open AppData folder: ' + e.message);
+            showToast({ message: 'Could not open AppData folder: ' + e.message, type: 'error' });
         }
     });
 
@@ -196,10 +197,10 @@ export function initBackupModalEvents() {
                 const parsed = JSON.parse(evt.target.result);
                 setAppStateData(parsed);
                 await persistCurrentState();
-                alert('Data restored successfully!');
+                showToast({ message: 'Data restored successfully!', type: 'success' });
                 closeBackupModal();
             } catch (err) {
-                alert('Import error: ' + err.message);
+                showToast({ message: 'Import error: ' + err.message, type: 'error' });
             }
         };
         reader.readAsText(file);
@@ -208,12 +209,26 @@ export function initBackupModalEvents() {
 
     // Clear All Data
     document.getElementById('btnWipeData')?.addEventListener('click', async () => {
-        if (confirm("Are you sure you want to clear all data? This will reset your workspace to a clean slate.")) {
+        confirmAction({
+            message: "Clear all data? This will reset your workspace to a clean slate.",
+            confirmText: "Wipe Data",
+            isDanger: true,
+            onConfirm: async () => {
+                AppState.subjects = [];
+                AppState.items = [];
+                AppState.materials = [];
+                await persistCurrentState();
+                showToast({ message: 'Workspace cleared', type: 'info' });
+                closeBackupModal();
+            }
+        });
+        return;
+        if (false) {
             AppState.subjects = [];
             AppState.items = [];
             AppState.materials = [];
             await persistCurrentState();
-            alert('Workspace cleared.');
+            showToast({ message: 'Workspace cleared', type: 'info' });
             closeBackupModal();
         }
     });
@@ -318,7 +333,7 @@ export function initBackupModalEvents() {
         const baseUrl = document.getElementById('aiBaseUrlInput')?.value.trim() || '';
 
         if (!apiKey) {
-            alert('Please enter an API Key first before fetching models.');
+            showToast({ message: 'Please enter an API Key first before fetching models.', type: 'warning' });
             apiKeyInput?.focus();
             return;
         }
@@ -380,7 +395,7 @@ export function initBackupModalEvents() {
                 modelStatusText.style.color = 'var(--palette-tomato-jam)';
                 modelStatusText.textContent = `❌ ${err.message}`;
             }
-            alert(`Could not fetch models: ${err.message}`);
+            showToast({ message: `Could not fetch models: ${err.message}`, type: 'error' });
         } finally {
             btnFetchModels.disabled = false;
             btnFetchModels.textContent = '🔄 Fetch Models from API';
@@ -394,7 +409,7 @@ export function initBackupModalEvents() {
         const baseUrl = document.getElementById('aiBaseUrlInput')?.value.trim() || '';
 
         if (!apiKey) {
-            alert('Please enter an API Key first.');
+            showToast({ message: 'Please enter an API Key first.', type: 'warning' });
             apiKeyInput?.focus();
             return;
         }
@@ -404,9 +419,9 @@ export function initBackupModalEvents() {
 
         try {
             const models = await fetchAiModels(provider, apiKey, baseUrl);
-            alert(`✅ Connection successful! Found ${models.length} model(s).`);
+            showToast({ message: `Connection successful! Found ${models.length} model(s).`, type: 'success' });
         } catch (err) {
-            alert(`❌ Connection failed: ${err.message}`);
+            showToast({ message: `Connection failed: ${err.message}`, type: 'error' });
         } finally {
             btnTestAiConnection.disabled = false;
             btnTestAiConnection.textContent = 'Test Connection';
@@ -421,7 +436,7 @@ export function initBackupModalEvents() {
         const model = aiModelCustomSelect ? aiModelCustomSelect.getValue() : '';
 
         if (!apiKey) {
-            alert('Please enter an API key.');
+            showToast({ message: 'Please enter an API key.', type: 'warning' });
             apiKeyInput?.focus();
             return;
         }
@@ -446,6 +461,6 @@ export function initBackupModalEvents() {
             badge.textContent = `${model || provider}`;
         }
 
-        alert('✅ AI settings saved successfully!');
+        showToast({ message: 'AI settings saved successfully!', type: 'success' });
     });
 }

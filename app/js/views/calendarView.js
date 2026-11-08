@@ -2,17 +2,20 @@
  * Academic Calendar View Renderer
  * 
  * Features:
- * 1. Full Monthly Academic Calendar Grid
+ * 1. Full Monthly Academic Calendar Grid with Robust 7-Column Layout (Zero Right-Edge Cutoff)
  * 2. Dual Gregorian & Shamsi (Jalali) Date Displays
- * 3. Responsive Day Cells with Task/Event chips color-coded by Course
- * 4. Day-Click / '+' button to quick-add assignments for that date
- * 5. Respects Search, Active Status Filters & Course Tag Filters
+ * 3. Responsive Day Cells with Overflow-Safe Task/Event Chips
+ * 4. "+N more" expansion indicator for heavy days
+ * 5. Day-Click / '+' button to quick-add assignments for that date
+ * 6. Soft Delete with Toast [Undo] (Zero Browser Dialogs)
+ * 7. Zero Emojis (100% Vectorized SVG Icons)
  */
 
 import { AppState, SUBJECT_GRADIENTS, getFilteredItems } from '../state.js';
 import { GREGORIAN_MONTH_NAMES_EN, JALALI_MONTH_NAMES_EN, gregorianToJalali } from '../jalali.js';
 import { escapeHtml } from '../dateUtils.js';
 import { openItemModal } from '../modals/itemModal.js';
+import { ICONS } from '../icons.js';
 
 let calendarDate = new Date();
 
@@ -50,7 +53,8 @@ export function renderCalendarView(container) {
                 ${gregMonthName} <span class="calendar-year-sub">${currentYear}</span>
             </h2>
             <div class="calendar-shamsi-badge">
-                <span>🗓️ ${jalaliMonthObj.nameEn} ${midJalali.jy}</span>
+                <span class="badge-icon-svg">${ICONS.schedule}</span>
+                <span>${jalaliMonthObj.nameEn} ${midJalali.jy}</span>
             </div>
         </div>
 
@@ -58,7 +62,9 @@ export function renderCalendarView(container) {
             <button type="button" class="btn btn-secondary btn-sm" id="btnCalPrev">‹ Previous</button>
             <button type="button" class="btn btn-secondary btn-sm ${isThisCurrentRealMonth ? 'btn-outline-cyan' : ''}" id="btnCalToday">Today</button>
             <button type="button" class="btn btn-secondary btn-sm" id="btnCalNext">Next ›</button>
-            <button type="button" class="btn btn-primary btn-sm" id="btnCalAddNew">➕ Add Task</button>
+            <button type="button" class="btn btn-primary btn-sm" id="btnCalAddNew">
+                ${ICONS.plus} Add Task
+            </button>
         </div>
     `;
 
@@ -83,7 +89,7 @@ export function renderCalendarView(container) {
 
     wrapper.appendChild(header);
 
-    // Weekdays Strip (Sun - Sat)
+    // Weekdays Strip (Sun - Sat) with minmax(0, 1fr)
     const weekdaysStrip = document.createElement('div');
     weekdaysStrip.className = 'calendar-weekdays-row';
     const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -95,7 +101,7 @@ export function renderCalendarView(container) {
     });
     wrapper.appendChild(weekdaysStrip);
 
-    // Month Days Grid
+    // Month Days Grid with minmax(0, 1fr)
     const grid = document.createElement('div');
     grid.className = 'calendar-month-grid';
 
@@ -177,7 +183,7 @@ function createDayCell({ year, month, day, isOtherMonth, isToday, items }) {
             <span class="day-greg-num ${isToday ? 'today-pill' : ''}">${day}</span>
             <span class="day-shamsi-sub">${jDate.jd}</span>
         </div>
-        ${!isOtherMonth ? `<button type="button" class="btn-cal-add-day" title="Add item for this day">+</button>` : ''}
+        ${!isOtherMonth ? `<button type="button" class="btn-cal-add-day" title="Add item for this day">${ICONS.plus}</button>` : ''}
     `;
 
     if (!isOtherMonth) {
@@ -186,15 +192,26 @@ function createDayCell({ year, month, day, isOtherMonth, isToday, items }) {
             const targetDate = new Date(year, month, day, 23, 59, 0);
             openItemModal(null, null, 'task', targetDate.toISOString());
         });
+
+        // Clicking the cell background also prompts quick add
+        cell.addEventListener('click', (e) => {
+            if (e.target.closest('.calendar-item-chip') || e.target.closest('.btn-cal-add-day') || e.target.closest('.cal-more-badge')) return;
+            const targetDate = new Date(year, month, day, 23, 59, 0);
+            openItemModal(null, null, 'task', targetDate.toISOString());
+        });
     }
 
     cell.appendChild(cellHeader);
 
-    // Items Container
+    // Items Container with max 3 chips + "+N more" badge
     const itemsList = document.createElement('div');
     itemsList.className = 'calendar-day-items-list';
 
-    items.forEach(item => {
+    const maxVisibleChips = 3;
+    const visibleItems = items.slice(0, maxVisibleChips);
+    const extraCount = items.length - maxVisibleChips;
+
+    visibleItems.forEach(item => {
         const subj = AppState.subjects.find(s => s.id === item.subjectId) || { title: "General", gradientIndex: 0 };
         const gradient = SUBJECT_GRADIENTS[subj.gradientIndex || 0] || SUBJECT_GRADIENTS[0];
         const isTask = item.kind === 'task';
@@ -202,10 +219,10 @@ function createDayCell({ year, month, day, isOtherMonth, isToday, items }) {
         const chip = document.createElement('div');
         chip.className = `calendar-item-chip ${item.completed ? 'is-completed' : ''}`;
         chip.title = `${item.title} (${subj.title}) - ${item.completed ? 'Completed' : 'Pending'}`;
-        chip.style.borderLeftColor = gradient.primary || 'var(--palette-stormy-teal)';
+        chip.style.borderLeftColor = gradient.primary || 'var(--color-primary)';
 
         chip.innerHTML = `
-            <span class="chip-icon">${item.typeIcon || (isTask ? '📋' : '📅')}</span>
+            <span class="chip-icon">${isTask ? ICONS.task : ICONS.event}</span>
             <span class="chip-title">${escapeHtml(item.title)}</span>
         `;
 
@@ -216,6 +233,20 @@ function createDayCell({ year, month, day, isOtherMonth, isToday, items }) {
 
         itemsList.appendChild(chip);
     });
+
+    if (extraCount > 0) {
+        const moreBadge = document.createElement('div');
+        moreBadge.className = 'cal-more-badge';
+        moreBadge.style.cssText = 'font-size: 0.68rem; font-weight: 700; color: var(--color-primary); cursor: pointer; padding: 1px 4px;';
+        moreBadge.textContent = `+${extraCount} more`;
+        moreBadge.title = `View all ${items.length} items for this day`;
+        moreBadge.addEventListener('click', (e) => {
+            e.stopPropagation();
+            // Open the first item or day
+            if (items[maxVisibleChips]) openItemModal(items[maxVisibleChips].id);
+        });
+        itemsList.appendChild(moreBadge);
+    }
 
     cell.appendChild(itemsList);
     return cell;

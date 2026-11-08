@@ -68,9 +68,9 @@ export function subscribe(fn) {
     return () => listeners.delete(fn);
 }
 
-export function notify(eventName = 'change') {
+export function notify(eventName = 'change', payload = null) {
     listeners.forEach(fn => {
-        try { fn(AppState, eventName); } catch (e) { console.error('[State Listener Error]', e); }
+        try { fn(AppState, eventName, payload); } catch (e) { console.error('[State Listener Error]', e); }
     });
 }
 
@@ -105,7 +105,6 @@ export function normalizeData(raw) {
         ...s
     })) : [];
 
-    // Ensure tags in subjects are added to config tags
     subjects.forEach(s => {
         if (Array.isArray(s.tags)) {
             s.tags.forEach(t => {
@@ -191,7 +190,7 @@ export function setAppStateData(rawData) {
 /**
  * Persist current state to disk and notify subscribers.
  */
-export async function persistCurrentState() {
+export async function persistCurrentState(silentEvent = false) {
     const payload = {
         $schema: "StudyFlowOrganizer_v4",
         metadata: {
@@ -208,7 +207,9 @@ export async function persistCurrentState() {
         trash: AppState.trash
     };
     const result = await saveData(payload);
-    notify('data-saved');
+    if (!silentEvent) {
+        notify('data-saved');
+    }
     return result;
 }
 
@@ -249,7 +250,6 @@ export async function addOrUpdateSubject(subjData) {
         AppState.subjects.push(finalSubj);
     }
 
-    // Register any new tags into config.tags
     if (Array.isArray(finalSubj.tags)) {
         finalSubj.tags.forEach(tag => {
             if (tag && !AppState.config.tags.includes(tag)) {
@@ -263,7 +263,7 @@ export async function addOrUpdateSubject(subjData) {
 }
 
 /**
- * Soft delete: moves course, items, and materials to trash
+ * Soft delete: moves course, items, and materials to trash (Req 7)
  */
 export async function deleteSubject(subjectId) {
     const subj = AppState.subjects.find(s => s.id === subjectId);
@@ -314,9 +314,6 @@ export async function restoreSubject(subjectId) {
     return subj;
 }
 
-/**
- * Permanently removes a course and all its items from trash
- */
 export async function permanentlyDeleteSubject(subjectId) {
     if (!AppState.trash) return;
     AppState.trash.subjects = AppState.trash.subjects.filter(s => s.id !== subjectId);
@@ -326,16 +323,62 @@ export async function permanentlyDeleteSubject(subjectId) {
 }
 
 /**
- * Clears all items in the trash
+ * Soft delete for individual tasks/events (Req 4)
+ */
+export async function deleteItem(itemId) {
+    const item = AppState.items.find(i => i.id === itemId);
+    if (!item) return null;
+
+    const deletedAt = new Date().toISOString();
+    const trashedItem = { ...item, deletedAt };
+
+    if (!AppState.trash) AppState.trash = { subjects: [], items: [], materials: [] };
+    if (!Array.isArray(AppState.trash.items)) AppState.trash.items = [];
+
+    AppState.trash.items.push(trashedItem);
+    AppState.items = AppState.items.filter(i => i.id !== itemId);
+
+    AppState.materials.forEach(m => {
+        if (m.itemId === itemId) m.itemId = "";
+    });
+
+    await persistCurrentState();
+    return trashedItem;
+}
+
+/**
+ * Restore an individual task/event from trash (Req 4)
+ */
+export async function restoreItem(itemId) {
+    if (!AppState.trash || !Array.isArray(AppState.trash.items)) return null;
+    const idx = AppState.trash.items.findIndex(i => i.id === itemId);
+    if (idx === -1) return null;
+
+    const [item] = AppState.trash.items.splice(idx, 1);
+    delete item.deletedAt;
+    AppState.items.push(item);
+
+    await persistCurrentState();
+    return item;
+}
+
+/**
+ * Permanently delete a task/event from trash (Req 4)
+ */
+export async function permanentlyDeleteItem(itemId) {
+    if (!AppState.trash || !Array.isArray(AppState.trash.items)) return;
+    AppState.trash.items = AppState.trash.items.filter(i => i.id !== itemId);
+    await persistCurrentState();
+}
+
+/**
+ * Clears all items in the trash (courses, tasks & materials)
  */
 export async function emptyTrash() {
     AppState.trash = { subjects: [], items: [], materials: [] };
     await persistCurrentState();
 }
 
-/**
- * Toggle pin status of a subject
- */
 export async function togglePinSubject(subjectId) {
     const subj = AppState.subjects.find(s => s.id === subjectId);
     if (subj) {
@@ -344,17 +387,11 @@ export async function togglePinSubject(subjectId) {
     }
 }
 
-/**
- * Reorder subjects array and persist
- */
 export async function reorderSubjects(reorderedList) {
     AppState.subjects = reorderedList.map((s, idx) => ({ ...s, order: idx }));
     await persistCurrentState();
 }
 
-/**
- * Add a new tag to the global config
- */
 export async function addGlobalTag(tagName) {
     const clean = tagName.trim();
     if (!clean) return;
@@ -393,20 +430,20 @@ export async function addOrUpdateItem(itemData) {
     return finalItem;
 }
 
-export async function toggleItemComplete(itemId) {
+/**
+ * Toggle task completion without triggering full-page reload (Req 3)
+ */
+export async function toggleItemComplete(itemId, isSilent = false) {
     const item = AppState.items.find(i => i.id === itemId);
     if (item) {
         item.completed = !item.completed;
-        await persistCurrentState();
+        await persistCurrentState(isSilent);
+        if (isSilent) {
+            notify('item-toggled', item);
+        }
+        return item;
     }
-}
-
-export async function deleteItem(itemId) {
-    AppState.items = AppState.items.filter(i => i.id !== itemId);
-    AppState.materials.forEach(m => {
-        if (m.itemId === itemId) m.itemId = "";
-    });
-    await persistCurrentState();
+    return null;
 }
 
 export async function addOrUpdateMaterial(matData) {
@@ -442,13 +479,17 @@ export async function addOrUpdateMaterial(matData) {
 }
 
 export async function deleteMaterial(materialId) {
+    const mat = AppState.materials.find(m => m.id === materialId);
+    if (mat) {
+        if (!AppState.trash) AppState.trash = { subjects: [], items: [], materials: [] };
+        if (!Array.isArray(AppState.trash.materials)) AppState.trash.materials = [];
+        AppState.trash.materials.push({ ...mat, deletedAt: new Date().toISOString() });
+    }
     AppState.materials = AppState.materials.filter(m => m.id !== materialId);
     await persistCurrentState();
+    return mat;
 }
 
-/**
- * Checks if a course subject matches a search query tokens
- */
 export function doesSubjectMatchQuery(subj, query) {
     if (!subj) return false;
     if (!query || !query.trim()) return true;
@@ -458,13 +499,9 @@ export function doesSubjectMatchQuery(subj, query) {
     return tokens.every(token => corpus.includes(token));
 }
 
-/**
- * Filter items according to search query, active status filter, and tag filter
- */
 export function getFilteredItems() {
     let result = [...AppState.items];
 
-    // Filter by tag if selected
     if (AppState.activeTagFilter && AppState.activeTagFilter !== 'all') {
         const tag = AppState.activeTagFilter.toLowerCase();
         const matchingSubjectIds = new Set(
@@ -475,7 +512,6 @@ export function getFilteredItems() {
         result = result.filter(i => matchingSubjectIds.has(i.subjectId));
     }
 
-    // Filter by type / status
     if (AppState.activeFilter === 'only_tasks') {
         result = result.filter(i => i.kind === 'task');
     } else if (AppState.activeFilter === 'only_events') {
@@ -493,7 +529,6 @@ export function getFilteredItems() {
         });
     }
 
-    // Filter by search query (multi-token search)
     const rawQuery = (AppState.searchQuery || '').trim();
     if (rawQuery) {
         const tokens = rawQuery.toLowerCase().split(/\s+/).filter(Boolean);

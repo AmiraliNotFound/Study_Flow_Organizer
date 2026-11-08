@@ -8,6 +8,7 @@ import { getDatePreset } from '../dateUtils.js';
 import { CustomDatePicker } from '../components/customDatePicker.js';
 import { CustomTimePicker } from '../components/customTimePicker.js';
 import { CustomSelect } from '../components/customSelect.js';
+import { showToast } from '../toast.js';
 
 let activeItemId = null;
 let activeKind = 'task';
@@ -22,7 +23,7 @@ export function openItemModal(itemId = null, preselectedSubjectId = null, defaul
     if (!modal) return;
 
     if (AppState.subjects.length === 0) {
-        alert("Please create a course subject before adding tasks or events.");
+        showToast({ message: "Please create a course subject before adding tasks or events.", type: 'warning' });
         return;
     }
 
@@ -206,12 +207,12 @@ export function initItemModalEvents() {
         const title = document.getElementById('itemTitleInput').value.trim();
 
         if (!subjectId) {
-            alert('Please select a course subject');
+            showToast({ message: 'Please select a course subject', type: 'error' });
             return;
         }
 
         if (!title) {
-            alert('Title is required');
+            showToast({ message: 'Title is required', type: 'error' });
             return;
         }
 
