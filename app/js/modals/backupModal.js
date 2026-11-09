@@ -1,3 +1,5 @@
+import { mountModalHtml } from './modalMount.js';
+import { SETTINGS_MODAL_HTML } from './modalTemplates.js';
 /**
  * Backup, Export, Import & Standard Data Location Controller
  */
@@ -14,6 +16,7 @@ let aiProviderCustomSelect = null;
 let aiModelCustomSelect = null;
 
 export async function openBackupModal() {
+    mountModalHtml('settingsModal', SETTINGS_MODAL_HTML);
     const modal = document.getElementById('settingsModal') || document.getElementById('backupModal');
     if (!modal) return;
 
@@ -167,6 +170,7 @@ export function exportDataToJson() {
 }
 
 export function initBackupModalEvents() {
+    mountModalHtml('settingsModal', SETTINGS_MODAL_HTML);
     document.getElementById('backupModalCloseBtn')?.addEventListener('click', closeBackupModal);
     document.getElementById('btnCloseBackupModal')?.addEventListener('click', closeBackupModal);
 

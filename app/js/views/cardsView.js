@@ -181,7 +181,6 @@ function createSubjectCard(subj, container, hasSearch) {
             const [moved] = allSubjs.splice(sourceIdx, 1);
             allSubjs.splice(targetIdx, 0, moved);
             await reorderSubjects(allSubjs);
-            renderCardsView(container);
         }
         draggedSubjectId = null;
     });
@@ -239,7 +238,6 @@ function createSubjectCard(subj, container, hasSearch) {
     banner.querySelector('.btn-pin-subj').addEventListener('click', async (e) => {
         e.stopPropagation();
         await togglePinSubject(subj.id);
-        renderCardsView(container);
     });
 
     banner.querySelector('.btn-add-item').addEventListener('click', (e) => {

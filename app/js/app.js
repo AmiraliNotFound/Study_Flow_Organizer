@@ -21,6 +21,7 @@ import { openFolderModal, initFolderModalEvents } from './modals/folderModal.js'
 import { openBackupModal, closeBackupModal, initBackupModalEvents } from './modals/backupModal.js';
 import { openTrashModal, closeTrashModal, initTrashModalEvents } from './modals/trashModal.js';
 import { openAiModal, initAiModalEvents } from './modals/aiModal.js';
+import { initTagModalEvents } from './modals/tagModal.js';
 import { initQuickAiVoiceEvents } from './services/quickAiVoice.js';
 
 // Renders the currently selected view
@@ -202,47 +203,6 @@ function initTheme() {
     applyPalette(getActivePaletteId());
 }
 
-// Tag Management Modal Functions
-function openTagManagerModal() {
-    const modal = document.getElementById('tagManagerModal');
-    if (!modal) return;
-    renderTagManagerList();
-    modal.classList.add('is-active');
-}
-
-function closeTagManagerModal() {
-    const modal = document.getElementById('tagManagerModal');
-    if (modal) modal.classList.remove('is-active');
-    renderActiveView();
-}
-
-function renderTagManagerList() {
-    const wrap = document.getElementById('modalAllTagsWrap');
-    if (!wrap) return;
-    wrap.innerHTML = '';
-
-    const allTags = new Set(AppState.config.tags || []);
-    AppState.subjects.forEach(s => {
-        if (Array.isArray(s.tags)) s.tags.forEach(t => allTags.add(t));
-    });
-
-    if (allTags.size === 0) {
-        wrap.innerHTML = `<span style="font-size: 0.8rem; color: var(--text-muted); font-style: italic;">No tags defined yet</span>`;
-        return;
-    }
-
-    Array.from(allTags).sort().forEach(tag => {
-        const count = AppState.subjects.filter(s => Array.isArray(s.tags) && s.tags.includes(tag)).length;
-        const chip = document.createElement('div');
-        chip.className = 'modal-tag-chip-row';
-        chip.innerHTML = `
-            <span class="chip-tag-name">#${tag}</span>
-            <span class="chip-course-count">${count} course${count === 1 ? '' : 's'}</span>
-        `;
-        wrap.appendChild(chip);
-    });
-}
-
 // Setup all event listeners
 function initAppEvents() {
     // 1. Floating "+" Create Button & Dropdown
@@ -318,21 +278,7 @@ function initAppEvents() {
         await openDataDirectory();
     });
 
-    // Tag Filter Bar "+" button (Req 2)
-    document.getElementById('btnOpenNewTagModal')?.addEventListener('click', openTagManagerModal);
-    document.getElementById('tagModalCloseBtn')?.addEventListener('click', closeTagManagerModal);
-    document.getElementById('btnCloseTagModal')?.addEventListener('click', closeTagManagerModal);
-
-    document.getElementById('btnSaveNewTag')?.addEventListener('click', async () => {
-        const input = document.getElementById('inputNewTagName');
-        const val = (input?.value || '').trim().replace(/^#+/, '');
-        if (val) {
-            await addGlobalTag(val);
-            if (input) input.value = '';
-            renderTagManagerList();
-            renderTagFilterStrip();
-        }
-    });
+        // Tag Modal initialized via initTagModalEvents
 
     // Search bar
     const searchInput = document.getElementById('globalSearchInput');
@@ -428,6 +374,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     try { initBackupModalEvents(); } catch (e) { console.error('[App] initBackupModalEvents error:', e); }
     try { initTrashModalEvents(); } catch (e) { console.error('[App] initTrashModalEvents error:', e); }
     try { initAiModalEvents(); } catch (e) { console.error('[App] initAiModalEvents error:', e); }
+    try { initTagModalEvents(() => { renderTagFilterStrip(); renderActiveView(); }); } catch (e) { console.error('[App] initTagModalEvents error:', e); }
     try { initQuickAiVoiceEvents(); } catch (e) { console.error('[App] initQuickAiVoiceEvents error:', e); }
     try { initAppEvents(); } catch (e) { console.error('[App] initAppEvents error:', e); }
 

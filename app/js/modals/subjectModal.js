@@ -1,3 +1,5 @@
+import { mountModalHtml } from './modalMount.js';
+import { SUBJECT_MODAL_HTML } from './modalTemplates.js';
 /**
  * Add / Edit Subject Modal Controller with Tagging & Soft-Delete Trash Support
  */
@@ -11,6 +13,7 @@ let selectedGradientIndex = 0;
 let currentTags = [];
 
 export function openSubjectModal(subjectId = null) {
+    mountModalHtml('subjectModal', SUBJECT_MODAL_HTML);
     const modal = document.getElementById('subjectModal');
     if (!modal) return;
 
@@ -156,6 +159,7 @@ function renderTagsEditor() {
 }
 
 export function initSubjectModalEvents() {
+    mountModalHtml('subjectModal', SUBJECT_MODAL_HTML);
     document.getElementById('subjectModalCloseBtn')?.addEventListener('click', closeSubjectModal);
     document.getElementById('btnCancelSubject')?.addEventListener('click', closeSubjectModal);
 

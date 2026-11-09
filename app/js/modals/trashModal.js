@@ -1,3 +1,5 @@
+import { mountModalHtml } from './modalMount.js';
+import { TRASH_MODAL_HTML } from './modalTemplates.js';
 /**
  * Course & Task Trash / Recycle Bin Modal Controller (Req 4, Req 7, Issue 4)
  * 
@@ -24,6 +26,7 @@ import { showToast, confirmAction } from '../toast.js';
 let activeTrashTab = 'all'; // 'all' | 'courses' | 'tasks'
 
 export function openTrashModal() {
+    mountModalHtml('trashModal', TRASH_MODAL_HTML);
     const modal = document.getElementById('trashModal');
     if (!modal) return;
 
@@ -205,6 +208,7 @@ export function renderTrashList() {
 }
 
 export function initTrashModalEvents() {
+    mountModalHtml('trashModal', TRASH_MODAL_HTML);
     document.getElementById('trashModalCloseBtn')?.addEventListener('click', closeTrashModal);
     document.getElementById('btnCloseTrashModal')?.addEventListener('click', closeTrashModal);
 

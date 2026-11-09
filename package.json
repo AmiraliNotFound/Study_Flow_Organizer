@@ -8,9 +8,9 @@
     "server": "node server/server.js",
     "build:exe": "node scripts/build_standalone_exe.js",
     "build:launcher": "gcc -mwindows -O2 scripts/launcher.c -o Study_Flow_Organizer.exe -lws2_32",
-    "build:tauri": "cargo tauri build",
-    "test": "node scripts/smoke_test.mjs",
-    "check": "tsc -p jsconfig.json"
+    "test": "vitest run",
+    "check": "tsc -p jsconfig.json",
+    "test:watch": "vitest"
   },
   "keywords": [
     "academic",
@@ -27,6 +27,7 @@
   "author": "Amirali Navidi & Sina Sharifi",
   "license": "MIT",
   "devDependencies": {
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0"
   }
 }

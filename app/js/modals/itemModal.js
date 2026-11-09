@@ -1,3 +1,5 @@
+import { mountModalHtml } from './modalMount.js';
+import { ITEM_MODAL_HTML } from './modalTemplates.js';
 /**
  * Add / Edit Item (Task or Event) Modal Controller
  * Featuring Custom Month Calendar (Dual Gregorian + Shamsi) & Custom Stepper Time Picker
@@ -19,6 +21,7 @@ let datePicker = null;
 let timePicker = null;
 
 export function openItemModal(itemId = null, preselectedSubjectId = null, defaultKind = 'task', initialDueDate = null) {
+    mountModalHtml('itemModal', ITEM_MODAL_HTML);
     const modal = document.getElementById('itemModal');
     if (!modal) return;
 
@@ -155,6 +158,7 @@ function autoUpdateTitle() {
 }
 
 export function initItemModalEvents() {
+    mountModalHtml('itemModal', ITEM_MODAL_HTML);
     // 1. Initialize Custom Subject Dropdown
     const subjectWrap = document.getElementById('itemSubjectSelectWrap');
     if (subjectWrap) {

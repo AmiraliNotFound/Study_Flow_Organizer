@@ -1,3 +1,5 @@
+import { mountModalHtml } from './modalMount.js';
+import { FOLDER_MODAL_HTML } from './modalTemplates.js';
 /**
  * Course Folder Linking & Windows Explorer Modal Controller
  * Featuring Custom Styled Subject Dropdown
@@ -12,6 +14,7 @@ let activeMaterialId = null;
 let folderSubjectSelect = null;
 
 export function openFolderModal(materialId = null, preselectedSubjectId = null) {
+    mountModalHtml('folderModal', FOLDER_MODAL_HTML);
     const modal = document.getElementById('folderModal');
     if (!modal) return;
 
@@ -66,6 +69,7 @@ export function closeFolderModal() {
 }
 
 export function initFolderModalEvents() {
+    mountModalHtml('folderModal', FOLDER_MODAL_HTML);
     // Initialize Custom Subject Dropdown
     const subjectWrap = document.getElementById('folderSubjectSelectWrap');
     if (subjectWrap) {
