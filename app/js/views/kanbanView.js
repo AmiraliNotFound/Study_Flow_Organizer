@@ -2,11 +2,14 @@
  * Interactive Kanban Board View Renderer with HTML5 Drag-and-Drop
  * 
  * Features:
- * 1. 4 Workflow Columns: To Do, In Progress, Urgent (<48h), Completed
- * 2. Drag & Drop between columns updates item status
- * 3. Soft delete with Toast [Undo] notification (Zero Browser Dialogs)
- * 4. Zero Hardcoded Colors (Uses Dynamic Theme Custom Properties)
- * 5. Zero Emojis (100% Vectorized SVG Icons)
+ * 1. 3 Clean Workflow Columns: To Do, In Progress, Completed
+ * 2. Drag & Drop between columns reliably updates item workflow status (persisted to disk)
+ * 3. Chronological sorting with urgency badges (<48h highlighted at the top of active columns)
+ * 4. View-aware filtering: ignores global status starvation while respecting Topics, Search, & Kind
+ * 5. Full vertical scrollable card list with zero overflow/cut-off bugs
+ * 6. Soft delete with Toast [Undo] notification (Zero Browser Dialogs)
+ * 7. Zero Hardcoded Colors (Uses Dynamic Theme Custom Properties)
+ * 8. Zero Emojis (100% Vectorized SVG Icons)
  */
 
 import {
@@ -29,7 +32,9 @@ export function renderKanbanView(container) {
     if (!container) return;
     container.innerHTML = "";
 
-    const filteredItems = getFilteredItems();
+    // Ignore global status filters (pending/completed/urgent) so all 3 Kanban columns stay populated,
+    // while still honoring topic tags, search queries, and task/event kind filters.
+    const filteredItems = getFilteredItems({ ignoreStatusFilter: true });
 
     if (AppState.subjects.length === 0) {
         container.innerHTML = `
@@ -46,8 +51,7 @@ export function renderKanbanView(container) {
         return;
     }
 
-    // Partition items into 4 columns using dynamic theme colors
-    const now = Date.now();
+    // 3 True Workflow Columns (Urgency is rendered as card badges/highlights, not a trap column)
     const columns = [
         {
             id: 'todo',
@@ -64,13 +68,6 @@ export function renderKanbanView(container) {
             items: []
         },
         {
-            id: 'urgent',
-            title: 'Urgent (<48h)',
-            icon: ICONS.alert,
-            color: 'var(--color-urgent)',
-            items: []
-        },
-        {
             id: 'done',
             title: 'Completed',
             icon: ICONS.checkCircle,
@@ -79,20 +76,24 @@ export function renderKanbanView(container) {
         }
     ];
 
+    // Partition items into workflow columns
     filteredItems.forEach(item => {
         if (item.completed) {
-            columns[3].items.push(item);
+            columns[2].items.push(item);
+        } else if (item.inProgress) {
+            columns[1].items.push(item);
         } else {
-            const diffHours = (new Date(item.dueDate).getTime() - now) / (1000 * 60 * 60);
-            if (diffHours <= 48) {
-                columns[2].items.push(item);
-            } else if (item.inProgress) {
-                columns[1].items.push(item);
-            } else {
-                columns[0].items.push(item);
-            }
+            columns[0].items.push(item);
         }
     });
+
+    // Chronological sorting: active columns put earliest deadlines (most urgent) first;
+    // completed column puts most recently due items first.
+    const sortAsc = (a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+    const sortDesc = (a, b) => new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime();
+    columns[0].items.sort(sortAsc);
+    columns[1].items.sort(sortAsc);
+    columns[2].items.sort(sortDesc);
 
     const boardWrap = document.createElement('div');
     boardWrap.className = 'kanban-board-wrapper view-flow-in';
@@ -107,55 +108,71 @@ export function renderKanbanView(container) {
         const colHeader = document.createElement('div');
         colHeader.className = 'kanban-column-header';
         colHeader.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 8px;">
+            <div class="kanban-column-title-wrap">
                 <span class="col-icon-svg" style="color: ${col.color};">${col.icon}</span>
                 <span style="font-weight: 700; color: ${col.color};">${col.title}</span>
                 <span class="kanban-count-pill">${col.items.length}</span>
             </div>
             ${col.id !== 'done' ? `
-                <button type="button" class="compact-action-btn btn-kanban-add" title="Add Item">
+                <button type="button" class="compact-action-btn btn-kanban-add" title="Add Item to ${col.title}">
                     ${ICONS.plus}
                 </button>
             ` : ''}
         `;
-        colHeader.querySelector('.btn-kanban-add')?.addEventListener('click', () => openItemModal());
+        colHeader.querySelector('.btn-kanban-add')?.addEventListener('click', () => {
+            openItemModal(null, null, 'task');
+        });
         colEl.appendChild(colHeader);
 
-        // Cards list
+        // Cards list (uses both class names for complete CSS compatibility and scrolling)
         const cardsList = document.createElement('div');
-        cardsList.className = 'kanban-cards-list';
+        cardsList.className = 'kanban-column-cards kanban-cards-list';
         cardsList.dataset.columnId = col.id;
 
         // Drag over / drop handlers
         cardsList.addEventListener('dragover', (e) => {
             e.preventDefault();
-            cardsList.classList.add('drag-over');
+            colEl.classList.add('drag-over');
         });
-        cardsList.addEventListener('dragleave', () => {
-            cardsList.classList.remove('drag-over');
+        cardsList.addEventListener('dragleave', (e) => {
+            if (!colEl.contains(e.relatedTarget)) {
+                colEl.classList.remove('drag-over');
+            }
         });
         cardsList.addEventListener('drop', async (e) => {
             e.preventDefault();
-            cardsList.classList.remove('drag-over');
+            colEl.classList.remove('drag-over');
             const itemId = e.dataTransfer.getData('text/plain');
             if (!itemId) return;
 
             const item = AppState.items.find(i => i.id === itemId);
             if (!item) return;
 
+            let changed = false;
             if (col.id === 'done') {
-                item.completed = true;
-                item.inProgress = false;
+                if (!item.completed || item.inProgress) {
+                    item.completed = true;
+                    item.inProgress = false;
+                    changed = true;
+                }
             } else if (col.id === 'in_progress') {
-                item.completed = false;
-                item.inProgress = true;
+                if (item.completed || !item.inProgress) {
+                    item.completed = false;
+                    item.inProgress = true;
+                    changed = true;
+                }
             } else {
-                item.completed = false;
-                item.inProgress = false;
+                if (item.completed || item.inProgress) {
+                    item.completed = false;
+                    item.inProgress = false;
+                    changed = true;
+                }
             }
 
-            await persistCurrentState();
-            renderKanbanView(container);
+            if (changed) {
+                await persistCurrentState(true);
+                renderKanbanView(container);
+            }
         });
 
         if (col.items.length === 0) {
@@ -184,21 +201,11 @@ export function renderKanbanView(container) {
                 });
 
                 card.innerHTML = `
-                    <div class="kanban-card-subject-tag" style="background: ${gradient.css};">
-                        ${escapeHtml(subj.title)}
-                    </div>
-                    <div class="kanban-card-title">${escapeHtml(item.title)}</div>
-                    <div class="kanban-card-meta">
-                        <span><span class="meta-icon">${ICONS.schedule}</span> ${formatted.primaryDisplay}</span>
-                        ${!item.completed ? `<span class="compact-urgency-badge ${remaining.urgencyLevel}">${remaining.friendlyText}</span>` : ''}
-                    </div>
-                    ${item.extraInfo?.notes ? `<div class="kanban-card-notes">${renderMarkdown(item.extraInfo.notes)}</div>` : ''}
-                    <div class="kanban-card-actions">
-                        <span class="kanban-kind-indicator">
-                            <span class="kind-svg">${isTask ? ICONS.task : ICONS.event}</span>
-                            ${escapeHtml(item.typeName || (isTask ? 'Task' : 'Event'))}
-                        </span>
-                        <div style="display: flex; gap: 4px;">
+                    <div class="kanban-card-top">
+                        <div class="kanban-card-subject-tag" style="background: ${gradient.css};" title="${escapeHtml(subj.title)}">
+                            ${escapeHtml(subj.title)}
+                        </div>
+                        <div class="kanban-card-actions">
                             <button type="button" class="compact-action-btn btn-kb-edit" title="Edit Item">
                                 ${ICONS.edit}
                             </button>
@@ -206,6 +213,20 @@ export function renderKanbanView(container) {
                                 ${ICONS.trash}
                             </button>
                         </div>
+                    </div>
+                    <div class="kanban-card-title">${escapeHtml(item.title)}</div>
+                    <div class="kanban-card-meta">
+                        <span class="kanban-meta-date"><span class="meta-icon">${ICONS.schedule}</span> ${formatted.primaryDisplay}</span>
+                        ${!item.completed
+                            ? `<span class="compact-urgency-badge ${remaining.urgencyLevel}">${remaining.friendlyText}</span>`
+                            : `<span class="compact-urgency-badge completed">Done</span>`}
+                    </div>
+                    ${item.extraInfo?.notes ? `<div class="kanban-card-notes">${renderMarkdown(item.extraInfo.notes)}</div>` : ''}
+                    <div class="kanban-card-footer">
+                        <span class="kanban-kind-indicator">
+                            <span class="kind-svg">${isTask ? ICONS.task : ICONS.event}</span>
+                            ${escapeHtml(item.typeName || (isTask ? 'Task' : 'Event'))}
+                        </span>
                     </div>
                 `;
 

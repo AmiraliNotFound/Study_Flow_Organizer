@@ -16,8 +16,8 @@ export function openSubjectModal(subjectId = null) {
 
     activeSubjectId = subjectId;
     const modalTitle = document.getElementById('subjectModalTitle');
-    const form = document.getElementById('subjectForm');
-    form.reset();
+    const form = /** @type {HTMLFormElement|null} */ (document.getElementById('subjectForm'));
+    if (form && typeof form.reset === 'function') form.reset();
 
     const btnDelete = document.getElementById('btnDeleteSubject');
     if (btnDelete) {

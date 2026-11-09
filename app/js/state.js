@@ -5,6 +5,7 @@
 import { saveData } from './api.js';
 import { formatDualDate } from './jalali.js';
 import { DYNAMIC_SUBJECT_GRADIENTS } from './theme.js';
+import './types.js';
 
 // Getter for backward-compatibility with code that references SUBJECT_GRADIENTS
 export const SUBJECT_GRADIENTS = new Proxy([], {
@@ -77,6 +78,20 @@ export function notify(eventName = 'change', payload = null) {
 /**
  * Normalizes input JSON into v4 schema.
  */
+/**
+ * Normalizes raw JSON into strict application models, repairing any missing defaults.
+ * @param {any} raw
+ * @returns {{
+ *   $schema: string,
+ *   metadata: { version: string, appName: string, lastSaved: string, language: string },
+ *   user: { username: string },
+ *   config: any,
+ *   subjects: import('./types.js').Subject[],
+ *   items: import('./types.js').StudyItem[],
+ *   materials: import('./types.js').Material[],
+ *   trash: import('./types.js').TrashContainer
+ * }}
+ */
 export function normalizeData(raw) {
     if (!raw || typeof raw !== 'object') raw = {};
 
@@ -97,12 +112,12 @@ export function normalizeData(raw) {
         id: s.id || `subj_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
         title: s.title || "Subject",
         code: s.code || "",
+        instructor: s.instructor || "",
         tags: Array.isArray(s.tags) ? s.tags : [],
         isPinned: Boolean(s.isPinned),
         order: typeof s.order === 'number' ? s.order : idx,
         gradientIndex: typeof s.gradientIndex === 'number' ? s.gradientIndex : Math.floor(Math.random() * 6),
-        createdAt: s.createdAt || new Date().toISOString(),
-        ...s
+        createdAt: s.createdAt || new Date().toISOString()
     })) : [];
 
     subjects.forEach(s => {
@@ -130,6 +145,7 @@ export function normalizeData(raw) {
                 notes: item.extraInfo?.notes ?? item.notes ?? ""
             },
             dueDate: item.dueDate || new Date().toISOString(),
+            inProgress: Boolean(item.inProgress),
             completed: Boolean(item.completed),
             createdAt: item.createdAt || new Date().toISOString()
         };
@@ -412,6 +428,7 @@ export async function addOrUpdateItem(itemData) {
         } else {
             finalItem = {
                 completed: false,
+                inProgress: Boolean(itemData.inProgress),
                 createdAt: itemData.createdAt || new Date().toISOString(),
                 ...itemData
             };
@@ -421,6 +438,7 @@ export async function addOrUpdateItem(itemData) {
         finalItem = {
             id: `item_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
             completed: false,
+            inProgress: Boolean(itemData.inProgress),
             createdAt: new Date().toISOString(),
             ...itemData
         };
@@ -499,8 +517,15 @@ export function doesSubjectMatchQuery(subj, query) {
     return tokens.every(token => corpus.includes(token));
 }
 
-export function getFilteredItems() {
+/**
+ * Filters items according to active tag, toolbar filter pills, search query, and view context.
+ * @param {import('./types.js').FilterOptions} [options]
+ * @returns {import('./types.js').StudyItem[]}
+ */
+export function getFilteredItems(options = {}) {
     let result = [...AppState.items];
+
+    const bypassStatusFilter = Boolean(options.ignoreStatusFilter || options.view === 'kanban');
 
     if (AppState.activeTagFilter && AppState.activeTagFilter !== 'all') {
         const tag = AppState.activeTagFilter.toLowerCase();
@@ -516,17 +541,21 @@ export function getFilteredItems() {
         result = result.filter(i => i.kind === 'task');
     } else if (AppState.activeFilter === 'only_events') {
         result = result.filter(i => i.kind === 'event');
-    } else if (AppState.activeFilter === 'pending') {
-        result = result.filter(i => !i.completed);
-    } else if (AppState.activeFilter === 'completed') {
-        result = result.filter(i => i.completed);
-    } else if (AppState.activeFilter === 'urgent') {
-        const now = Date.now();
-        result = result.filter(i => {
-            if (i.completed) return false;
-            const diffHours = (new Date(i.dueDate).getTime() - now) / (1000 * 60 * 60);
-            return diffHours <= 48;
-        });
+    }
+
+    if (!bypassStatusFilter) {
+        if (AppState.activeFilter === 'pending') {
+            result = result.filter(i => !i.completed);
+        } else if (AppState.activeFilter === 'completed') {
+            result = result.filter(i => i.completed);
+        } else if (AppState.activeFilter === 'urgent') {
+            const now = Date.now();
+            result = result.filter(i => {
+                if (i.completed) return false;
+                const diffHours = (new Date(i.dueDate).getTime() - now) / (1000 * 60 * 60);
+                return diffHours <= 48;
+            });
+        }
     }
 
     const rawQuery = (AppState.searchQuery || '').trim();

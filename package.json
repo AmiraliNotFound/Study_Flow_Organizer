@@ -8,7 +8,9 @@
     "server": "node server/server.js",
     "build:exe": "node scripts/build_standalone_exe.js",
     "build:launcher": "gcc -mwindows -O2 scripts/launcher.c -o Study_Flow_Organizer.exe -lws2_32",
-    "build:tauri": "cargo tauri build"
+    "build:tauri": "cargo tauri build",
+    "test": "node scripts/smoke_test.mjs",
+    "check": "tsc -p jsconfig.json"
   },
   "keywords": [
     "academic",
@@ -23,5 +25,8 @@
     "desktop-app"
   ],
   "author": "Amirali Navidi & Sina Sharifi",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^7.0.2"
+  }
 }

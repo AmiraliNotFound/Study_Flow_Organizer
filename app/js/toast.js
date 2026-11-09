@@ -96,7 +96,7 @@ export function confirmAction({
     confirmText = "Delete",
     isDanger = true,
     onConfirm,
-    onCancel
+    onCancel = null
 }) {
     const container = getContainer();
 
