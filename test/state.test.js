@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { normalizeData, DEFAULT_CONFIG } from '../app/js/state.js';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { normalizeData, DEFAULT_CONFIG, AppState, addOrUpdateItem, toggleItemComplete } from '../app/js/state.js';
 
 describe('State Normalization & Schema Integrity', () => {
     it('should assign fallback configs when raw config is empty', () => {
@@ -94,5 +94,57 @@ describe('State Normalization & Schema Integrity', () => {
         expect(normalized.trash.subjects.length).toBe(1);
         expect(normalized.trash.items.length).toBe(1);
         expect(normalized.trash.items[0].inProgress).toBe(true);
+    });
+
+    it('should repair null or missing IDs during normalization', () => {
+        const raw = {
+            subjects: [{ id: null, title: 'Calculus' }],
+            items: [
+                { id: null, title: 'Task 1' },
+                { id: undefined, title: 'Task 2' },
+                { id: '', title: 'Task 3' }
+            ],
+            materials: [{ id: null, name: 'Notes' }]
+        };
+
+        const normalized = normalizeData(raw);
+
+        expect(typeof normalized.subjects[0].id).toBe('string');
+        expect(normalized.subjects[0].id.length).toBeGreaterThan(0);
+
+        expect(typeof normalized.items[0].id).toBe('string');
+        expect(typeof normalized.items[1].id).toBe('string');
+        expect(typeof normalized.items[2].id).toBe('string');
+
+        // Verify all repaired IDs are distinct
+        const ids = new Set(normalized.items.map(i => i.id));
+        expect(ids.size).toBe(3);
+
+        expect(typeof normalized.materials[0].id).toBe('string');
+    });
+
+    it('should assign distinct string IDs when addOrUpdateItem receives id: null', async () => {
+        AppState.items = [];
+
+        const item1 = await addOrUpdateItem({ id: null, title: 'HW1', subjectId: 's1' });
+        const item2 = await addOrUpdateItem({ id: null, title: 'Project1', subjectId: 's1' });
+
+        expect(typeof item1.id).toBe('string');
+        expect(typeof item2.id).toBe('string');
+        expect(item1.id).not.toBeNull();
+        expect(item2.id).not.toBeNull();
+        expect(item1.id).not.toBe(item2.id);
+
+        // Verify independent toggling does not reset the previous task
+        expect(item1.completed).toBe(false);
+        expect(item2.completed).toBe(false);
+
+        await toggleItemComplete(item1.id, true);
+        expect(item1.completed).toBe(true);
+        expect(item2.completed).toBe(false);
+
+        await toggleItemComplete(item2.id, true);
+        expect(item1.completed).toBe(true);
+        expect(item2.completed).toBe(true);
     });
 });

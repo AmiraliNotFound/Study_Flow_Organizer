@@ -110,71 +110,83 @@
     </header>
 
     <!-- ========================================================================
-         MAIN TOOLBAR: SEARCH, VIEW SWITCHER & FILTER PILLS
+         MAIN TOOLBAR: MINIMALIST CONTROL BAR (2-TIER STREAMLINED)
          ======================================================================== -->
     <div class="main-toolbar">
+        <!-- Tier 1: Search & Segmented View Switcher -->
         <div class="toolbar-top-row">
-            <!-- Global Search -->
             <div class="search-container">
                 <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <circle cx="11" cy="11" r="8"/>
                     <line x1="21" y1="21" x2="16.65" y2="16.65"/>
                 </svg>
-                <input type="text" id="globalSearchInput" class="search-input" placeholder="Search tasks, subjects, folders, locations, or notes... (Press '/' to focus)">
-                <button type="button" id="clearSearchBtn" class="search-clear">&times;</button>
+                <input type="text" id="globalSearchInput" class="search-input" placeholder="Search tasks, courses, notes...">
+                <kbd class="search-kbd-hint" id="searchKbdHint" title="Press '/' to focus search">/</kbd>
+                <button type="button" id="clearSearchBtn" class="search-clear" title="Clear search">&times;</button>
             </div>
 
-            <!-- Compact View Switcher Dropdown -->
-            <div class="view-dropdown-wrap" id="viewSelectorWrap">
-                <button type="button" class="view-selector-btn" id="viewSelectorBtn" title="Select View">
-                    <span id="activeViewIcon"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg></span>
-                    <span id="activeViewLabel">Cards View</span>
-                    <span class="dropdown-chevron">▾</span>
+            <!-- 1-Click Segmented View Switcher (Press 1, 2, 3, 4) -->
+            <div class="view-segmented-control" id="viewSegmentedControl" role="tablist" aria-label="Views">
+                <button type="button" class="segmented-tab active" data-view="grid" title="Cards Grid (Press 1)">
+                    <span class="tab-icon"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg></span>
+                    <span class="tab-label">Cards</span>
+                    <span class="tab-shortcut">1</span>
                 </button>
-                <div class="view-dropdown-menu hidden" id="viewSelectorMenu">
-                    <button type="button" class="view-menu-item active" data-view="grid">
-                        <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg></span> <span>Cards Grid</span>
-                    </button>
-                    <button type="button" class="view-menu-item" data-view="calendar">
-                        <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span> <span>Calendar View</span>
-                    </button>
-                    <button type="button" class="view-menu-item" data-view="timeline">
-                        <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span> <span>Timeline</span>
-                    </button>
-                    <button type="button" class="view-menu-item" data-view="kanban">
-                        <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="4.5" height="16" rx="1"/><rect x="9.75" y="4" width="4.5" height="12" rx="1"/><rect x="16.5" y="4" width="4.5" height="16" rx="1"/></svg></span> <span>Kanban Board</span>
-                    </button>
-                </div>
+                <button type="button" class="segmented-tab" data-view="calendar" title="Calendar View (Press 2)">
+                    <span class="tab-icon"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
+                    <span class="tab-label">Calendar</span>
+                    <span class="tab-shortcut">2</span>
+                </button>
+                <button type="button" class="segmented-tab" data-view="timeline" title="Timeline View (Press 3)">
+                    <span class="tab-icon"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>
+                    <span class="tab-label">Timeline</span>
+                    <span class="tab-shortcut">3</span>
+                </button>
+                <button type="button" class="segmented-tab" data-view="kanban" title="Kanban Board (Press 4)">
+                    <span class="tab-icon"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="4.5" height="16" rx="1"/><rect x="9.75" y="4" width="4.5" height="12" rx="1"/><rect x="16.5" y="4" width="4.5" height="16" rx="1"/></svg></span>
+                    <span class="tab-label">Kanban</span>
+                    <span class="tab-shortcut">4</span>
+                </button>
             </div>
         </div>
 
-        <!-- Filter Pills & Statistics Strip -->
-        <div class="filters-stats-row">
-            <div class="filter-pills-wrap">
-                <button type="button" class="filter-pill active" data-filter="all">All Items</button>
-                <button type="button" class="filter-pill" data-filter="only_tasks"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -1px; margin-right: 4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Tasks</button>
-                <button type="button" class="filter-pill" data-filter="only_events"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -1px; margin-right: 4px;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Events</button>
-                <button type="button" class="filter-pill filter-pill-urgent" data-filter="urgent"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -1px; margin-right: 4px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Under 48h</button>
-                <button type="button" class="filter-pill" data-filter="pending"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -1px; margin-right: 4px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>In Progress</button>
-                <button type="button" class="filter-pill" data-filter="completed"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align: -1px; margin-right: 4px;"><polyline points="20 6 9 17 4 12"/></svg>Completed</button>
+        <!-- Tier 2: Streamlined Status Filters + Integrated Inline Counters + Compact Topics Strip -->
+        <div class="toolbar-secondary-row">
+            <div class="filter-pills-wrap" role="tablist" aria-label="Status Filters">
+                <button type="button" class="filter-pill active" data-filter="all" title="All Items">
+                    <span class="pill-label">All</span>
+                    <span class="pill-count" id="statTotalTasks">0</span>
+                </button>
+                <button type="button" class="filter-pill" data-filter="only_tasks" title="Tasks Only">
+                    <span class="pill-label">Tasks</span>
+                    <span class="pill-count" id="statCountTasks">0</span>
+                </button>
+                <button type="button" class="filter-pill" data-filter="only_events" title="Events Only">
+                    <span class="pill-label">Events</span>
+                    <span class="pill-count" id="statCountEvents">0</span>
+                </button>
+                <button type="button" class="filter-pill filter-pill-urgent" data-filter="urgent" title="Due in <48h">
+                    <span class="pill-label">Urgent</span>
+                    <span class="pill-count urgent-badge" id="statUrgentTasks">0</span>
+                </button>
+                <button type="button" class="filter-pill" data-filter="pending" title="In Progress Items">
+                    <span class="pill-label">In Progress</span>
+                </button>
+                <button type="button" class="filter-pill filter-pill-done" data-filter="completed" title="Completed Items">
+                    <span class="pill-label">Done</span>
+                    <span class="pill-count" id="statCompletedTasks">0</span>
+                </button>
             </div>
 
-            <div class="stats-counter-strip">
-                <div class="stat-item">Total: <span class="stat-value" id="statTotalTasks">0</span></div>
-                <div class="stat-item" style="color: var(--palette-stormy-teal);">Tasks: <span class="stat-value" id="statCountTasks">0</span></div>
-                <div class="stat-item" style="color: var(--palette-chestnut);">Events: <span class="stat-value" id="statCountEvents">0</span></div>
-                <div class="stat-item" style="color: var(--palette-tomato-jam);">Urgent: <span class="stat-value" id="statUrgentTasks">0</span></div>
-                <div class="stat-item" style="color: var(--color-success);">Completed: <span class="stat-value" id="statCompletedTasks">0</span></div>
-            </div>
-        </div>
+            <div class="toolbar-divider" aria-hidden="true"></div>
 
-        <!-- New Row: Topic Tags Filter Strip (Req 2) -->
-        <div class="tags-filter-strip-row" id="tagsFilterStripRow">
-            <span class="tags-filter-title"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 3px;"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg> Topics:</span>
-            <div class="tags-pills-scroll-wrap" id="tagsPillsScrollWrap"></div>
-            <button type="button" class="btn-add-tag-filter" id="btnOpenNewTagModal" title="Add new tag / assign to courses">
-                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            </button>
+            <div class="tags-filter-strip-row" id="tagsFilterStripRow">
+                <span class="tags-filter-title">Topics</span>
+                <div class="tags-pills-scroll-wrap" id="tagsPillsScrollWrap"></div>
+                <button type="button" class="btn-add-tag-filter" id="btnOpenNewTagModal" title="Manage Topics">
+                    <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                </button>
+            </div>
         </div>
     </div>
 
@@ -194,6 +206,27 @@
         <!-- 4. Interactive Kanban Board View -->
         <div id="kanbanContentView" class="kanban-view-wrapper hidden"></div>
     </main>
+
+    <!-- ========================================================================
+         DESKTOP COMMAND PALETTE (Ctrl+K / Cmd+K)
+         ======================================================================== -->
+    <div id="cmdPaletteOverlay" class="cmd-palette-overlay hidden">
+        <div class="cmd-palette-box">
+            <div class="cmd-palette-header">
+                <span class="cmd-palette-search-icon">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                </span>
+                <input type="text" id="cmdPaletteInput" class="cmd-palette-input" placeholder="Type a command or search courses, tasks..." autocomplete="off">
+                <span class="cmd-palette-esc-badge">ESC</span>
+            </div>
+            <div class="cmd-palette-results" id="cmdPaletteResults"></div>
+            <div class="cmd-palette-footer">
+                <span><kbd>↑</kbd> <kbd>↓</kbd> navigate</span>
+                <span><kbd>↵</kbd> select</span>
+                <span><kbd>ESC</kbd> dismiss</span>
+            </div>
+        </div>
+    </div>
 
     <!-- ========================================================================
          DYNAMIC MODAL MOUNT CONTAINER

@@ -125,7 +125,7 @@ function updateAiContextDisplay() {
     if (coursesEl) {
         const count = AppState.subjects ? AppState.subjects.length : 0;
         coursesEl.textContent = `${count} course${count === 1 ? '' : 's'}`;
-        coursesEl.style.color = count > 0 ? 'var(--palette-powder-petal)' : 'var(--text-muted)';
+        coursesEl.style.color = count > 0 ? 'var(--text-primary)' : 'var(--text-muted)';
     }
 }
 
@@ -1034,10 +1034,10 @@ export function initAiModalEvents() {
     document.getElementById('aiModalCloseBtn')?.addEventListener('click', closeAiModal);
     document.getElementById('btnAiClose')?.addEventListener('click', closeAiModal);
 
-    // Active model badge in header opens Settings to configure
+    // Active model badge in header opens Settings to configure (AI Assistant tab)
     document.getElementById('aiActiveModelBadge')?.addEventListener('click', () => {
         closeAiModal();
-        openBackupModal();
+        openBackupModal('ai');
     });
 
     // History buttons: Preview Last Changes & Undo

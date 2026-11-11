@@ -2,22 +2,26 @@
  * Academic Calendar View Renderer
  * 
  * Features:
- * 1. Full Monthly Academic Calendar Grid with Robust 7-Column Layout (Zero Right-Edge Cutoff)
- * 2. Dual Gregorian & Shamsi (Jalali) Date Displays
- * 3. Responsive Day Cells with Overflow-Safe Task/Event Chips
- * 4. "+N more" expansion indicator for heavy days
- * 5. Day-Click / '+' button to quick-add assignments for that date
- * 6. Soft Delete with Toast [Undo] (Zero Browser Dialogs)
- * 7. Zero Emojis (100% Vectorized SVG Icons)
+ * 1. Full Monthly Academic Calendar Grid with Robust 7-Column Layout
+ * 2. 7-Day Weekly Agenda Mode with day columns
+ * 3. Dual Gregorian & Shamsi (Jalali) Date Displays
+ * 4. Direct Drag-and-Drop Rescheduling on Calendar Chips
+ * 5. Responsive Day Cells with Overflow-Safe Task/Event Chips
+ * 6. "+N more" expansion indicator for heavy days
+ * 7. Day-Click / '+' button to quick-add assignments for that date
+ * 8. Soft Delete with Toast [Undo] (Zero Browser Dialogs)
+ * 9. Zero Emojis (100% Vectorized SVG Icons)
  */
 
-import { AppState, SUBJECT_GRADIENTS, getFilteredItems } from '../state.js';
+import { AppState, SUBJECT_GRADIENTS, getFilteredItems, persistCurrentState } from '../state.js';
 import { GREGORIAN_MONTH_NAMES_EN, JALALI_MONTH_NAMES_EN, gregorianToJalali } from '../jalali.js';
-import { escapeHtml } from '../dateUtils.js';
+import { formatDate, calculateRemainingTime, escapeHtml } from '../dateUtils.js';
 import { openItemModal } from '../modals/itemModal.js';
 import { ICONS } from '../icons.js';
+import { showToast } from '../toast.js';
 
 let calendarDate = new Date();
+let calendarMode = 'month'; // 'month' | 'week'
 
 export function renderCalendarView(container) {
     if (!container) return;
@@ -59,6 +63,10 @@ export function renderCalendarView(container) {
         </div>
 
         <div class="calendar-controls-group">
+            <div class="calendar-mode-pill-toggle">
+                <button type="button" class="cal-mode-btn ${calendarMode === 'month' ? 'active' : ''}" id="btnCalModeMonth">Month</button>
+                <button type="button" class="cal-mode-btn ${calendarMode === 'week' ? 'active' : ''}" id="btnCalModeWeek">Week Agenda</button>
+            </div>
             <button type="button" class="btn btn-secondary btn-sm" id="btnCalPrev">‹ Previous</button>
             <button type="button" class="btn btn-secondary btn-sm ${isThisCurrentRealMonth ? 'btn-outline-cyan' : ''}" id="btnCalToday">Today</button>
             <button type="button" class="btn btn-secondary btn-sm" id="btnCalNext">Next ›</button>
@@ -68,8 +76,22 @@ export function renderCalendarView(container) {
         </div>
     `;
 
+    header.querySelector('#btnCalModeMonth').addEventListener('click', () => {
+        calendarMode = 'month';
+        renderCalendarView(container);
+    });
+
+    header.querySelector('#btnCalModeWeek').addEventListener('click', () => {
+        calendarMode = 'week';
+        renderCalendarView(container);
+    });
+
     header.querySelector('#btnCalPrev').addEventListener('click', () => {
-        calendarDate.setMonth(calendarDate.getMonth() - 1);
+        if (calendarMode === 'week') {
+            calendarDate.setDate(calendarDate.getDate() - 7);
+        } else {
+            calendarDate.setMonth(calendarDate.getMonth() - 1);
+        }
         renderCalendarView(container);
     });
 
@@ -79,7 +101,11 @@ export function renderCalendarView(container) {
     });
 
     header.querySelector('#btnCalNext').addEventListener('click', () => {
-        calendarDate.setMonth(calendarDate.getMonth() + 1);
+        if (calendarMode === 'week') {
+            calendarDate.setDate(calendarDate.getDate() + 7);
+        } else {
+            calendarDate.setMonth(calendarDate.getMonth() + 1);
+        }
         renderCalendarView(container);
     });
 
@@ -89,7 +115,31 @@ export function renderCalendarView(container) {
 
     wrapper.appendChild(header);
 
-    // Weekdays Strip (Sun - Sat) with minmax(0, 1fr)
+    if (calendarMode === 'week') {
+        renderWeekAgendaGrid(wrapper, calendarDate, filteredItems, container);
+    } else {
+        renderMonthGrid(wrapper, {
+            currentYear,
+            currentMonth,
+            firstDayIndex,
+            daysInCurrentMonth,
+            daysInPrevMonth,
+            isThisCurrentRealMonth,
+            filteredItems,
+            container
+        });
+    }
+
+    container.appendChild(wrapper);
+}
+
+/**
+ * 1. Renders the standard 30-day Month Grid with Drag-to-Reschedule
+ */
+function renderMonthGrid(wrapper, { currentYear, currentMonth, firstDayIndex, daysInCurrentMonth, daysInPrevMonth, isThisCurrentRealMonth, filteredItems, container }) {
+    const today = new Date();
+
+    // Weekdays Strip (Sun - Sat)
     const weekdaysStrip = document.createElement('div');
     weekdaysStrip.className = 'calendar-weekdays-row';
     const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -101,7 +151,7 @@ export function renderCalendarView(container) {
     });
     wrapper.appendChild(weekdaysStrip);
 
-    // Month Days Grid with minmax(0, 1fr)
+    // Month Days Grid
     const grid = document.createElement('div');
     grid.className = 'calendar-month-grid';
 
@@ -126,7 +176,8 @@ export function renderCalendarView(container) {
             day: dayNum,
             isOtherMonth: true,
             isToday: false,
-            items: []
+            items: [],
+            container
         }));
     }
 
@@ -142,11 +193,12 @@ export function renderCalendarView(container) {
             day: dayNum,
             isOtherMonth: false,
             isToday,
-            items: dayItems
+            items: dayItems,
+            container
         }));
     }
 
-    // 3. Next month leading days (fill up to complete weeks)
+    // 3. Next month leading days
     const totalCells = firstDayIndex + daysInCurrentMonth;
     const remainingCells = (7 - (totalCells % 7)) % 7;
     for (let dayNum = 1; dayNum <= remainingCells; dayNum++) {
@@ -158,18 +210,18 @@ export function renderCalendarView(container) {
             day: dayNum,
             isOtherMonth: true,
             isToday: false,
-            items: []
+            items: [],
+            container
         }));
     }
 
     wrapper.appendChild(grid);
-    container.appendChild(wrapper);
 }
 
 /**
- * Creates individual day cell in month calendar
+ * Creates individual day cell in month calendar with Drag-to-Reschedule
  */
-function createDayCell({ year, month, day, isOtherMonth, isToday, items }) {
+function createDayCell({ year, month, day, isOtherMonth, isToday, items, container }) {
     const cell = document.createElement('div');
     cell.className = `calendar-day-cell ${isOtherMonth ? 'other-month' : ''} ${isToday ? 'is-today-cell' : ''}`;
 
@@ -193,11 +245,50 @@ function createDayCell({ year, month, day, isOtherMonth, isToday, items }) {
             openItemModal(null, null, 'task', targetDate.toISOString());
         });
 
-        // Clicking the cell background also prompts quick add
+        // Clicking the cell background prompts quick add
         cell.addEventListener('click', (e) => {
             if (e.target.closest('.calendar-item-chip') || e.target.closest('.btn-cal-add-day') || e.target.closest('.cal-more-badge')) return;
             const targetDate = new Date(year, month, day, 23, 59, 0);
             openItemModal(null, null, 'task', targetDate.toISOString());
+        });
+
+        // Direct Drag-to-Reschedule drop target
+        cell.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            cell.classList.add('drag-over-day');
+        });
+        cell.addEventListener('dragleave', () => {
+            cell.classList.remove('drag-over-day');
+        });
+        cell.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            cell.classList.remove('drag-over-day');
+            const itemId = e.dataTransfer.getData('text/plain');
+            if (!itemId) return;
+
+            const item = AppState.items.find(i => i.id === itemId);
+            if (!item) return;
+
+            const oldDue = item.dueDate;
+            const oldDate = new Date(oldDue);
+            const newDate = new Date(year, month, day, oldDate.getHours() || 23, oldDate.getMinutes() || 59);
+
+            if (newDate.getTime() === oldDate.getTime()) return;
+
+            item.dueDate = newDate.toISOString();
+            await persistCurrentState(true);
+            renderCalendarView(container);
+
+            showToast({
+                message: `"${item.title}" rescheduled to ${formatDate(newDate).primaryDisplay}`,
+                type: 'success',
+                actionText: 'Undo',
+                onAction: async () => {
+                    item.dueDate = oldDue;
+                    await persistCurrentState(true);
+                    renderCalendarView(container);
+                }
+            });
         });
     }
 
@@ -218,8 +309,17 @@ function createDayCell({ year, month, day, isOtherMonth, isToday, items }) {
 
         const chip = document.createElement('div');
         chip.className = `calendar-item-chip ${item.completed ? 'is-completed' : ''}`;
-        chip.title = `${item.title} (${subj.title}) - ${item.completed ? 'Completed' : 'Pending'}`;
+        chip.draggable = true;
+        chip.title = `${item.title} (${subj.title}) - Drag to reschedule`;
         chip.style.borderLeftColor = gradient.primary || 'var(--color-primary)';
+
+        chip.addEventListener('dragstart', (e) => {
+            e.dataTransfer.setData('text/plain', item.id);
+            chip.classList.add('is-dragging');
+        });
+        chip.addEventListener('dragend', () => {
+            chip.classList.remove('is-dragging');
+        });
 
         chip.innerHTML = `
             <span class="chip-icon">${isTask ? ICONS.task : ICONS.event}</span>
@@ -242,7 +342,6 @@ function createDayCell({ year, month, day, isOtherMonth, isToday, items }) {
         moreBadge.title = `View all ${items.length} items for this day`;
         moreBadge.addEventListener('click', (e) => {
             e.stopPropagation();
-            // Open the first item or day
             if (items[maxVisibleChips]) openItemModal(items[maxVisibleChips].id);
         });
         itemsList.appendChild(moreBadge);
@@ -250,4 +349,141 @@ function createDayCell({ year, month, day, isOtherMonth, isToday, items }) {
 
     cell.appendChild(itemsList);
     return cell;
+}
+
+/**
+ * 2. Renders the 7-Day Weekly Agenda Mode
+ */
+function renderWeekAgendaGrid(wrapper, calendarDate, filteredItems, container) {
+    const today = new Date();
+    const curr = new Date(calendarDate);
+    const dayOfWeek = curr.getDay(); // 0=Sun
+    const startOfWeek = new Date(curr);
+    startOfWeek.setDate(curr.getDate() - dayOfWeek);
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    const weekWrap = document.createElement('div');
+    weekWrap.className = 'calendar-week-agenda-grid';
+
+    const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+    for (let i = 0; i < 7; i++) {
+        const dayDate = new Date(startOfWeek);
+        dayDate.setDate(startOfWeek.getDate() + i);
+
+        const year = dayDate.getFullYear();
+        const month = dayDate.getMonth();
+        const day = dayDate.getDate();
+        const isToday = today.getFullYear() === year && today.getMonth() === month && today.getDate() === day;
+
+        const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const dayItems = filteredItems.filter(item => {
+            if (!item.dueDate) return false;
+            const d = new Date(item.dueDate);
+            return d.getFullYear() === year && d.getMonth() === month && d.getDate() === day;
+        });
+
+        const jDate = gregorianToJalali(year, month + 1, day);
+
+        const col = document.createElement('div');
+        col.className = `week-agenda-col ${isToday ? 'is-today-col' : ''}`;
+
+        col.innerHTML = `
+            <div class="week-col-header">
+                <span class="week-col-name">${weekdays[i]}</span>
+                <div class="week-col-dates">
+                    <span class="week-col-greg ${isToday ? 'today-pill' : ''}">${day}</span>
+                    <span class="week-col-shamsi">${jDate.jd}</span>
+                </div>
+            </div>
+            <div class="week-col-cards"></div>
+            <div class="week-col-footer">
+                <button type="button" class="btn-week-add-task">${ICONS.plus} Add Item</button>
+            </div>
+        `;
+
+        const cardsWrap = col.querySelector('.week-col-cards');
+
+        col.querySelector('.btn-week-add-task').addEventListener('click', () => {
+            const targetDate = new Date(year, month, day, 23, 59, 0);
+            openItemModal(null, null, 'task', targetDate.toISOString());
+        });
+
+        // Drag & drop reschedule target on day column
+        col.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            col.classList.add('drag-over-day');
+        });
+        col.addEventListener('dragleave', () => col.classList.remove('drag-over-day'));
+        col.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            col.classList.remove('drag-over-day');
+            const itemId = e.dataTransfer.getData('text/plain');
+            if (!itemId) return;
+            const item = AppState.items.find(it => it.id === itemId);
+            if (!item) return;
+
+            const oldDue = item.dueDate;
+            const oldDate = new Date(oldDue);
+            const newDate = new Date(year, month, day, oldDate.getHours() || 23, oldDate.getMinutes() || 59);
+
+            item.dueDate = newDate.toISOString();
+            await persistCurrentState(true);
+            renderCalendarView(container);
+            showToast({
+                message: `"${item.title}" rescheduled to ${formatDate(newDate).primaryDisplay}`,
+                type: 'success',
+                actionText: 'Undo',
+                onAction: async () => {
+                    item.dueDate = oldDue;
+                    await persistCurrentState(true);
+                    renderCalendarView(container);
+                }
+            });
+        });
+
+        if (dayItems.length === 0) {
+            cardsWrap.innerHTML = `<div class="week-empty-slot">No items scheduled</div>`;
+        } else {
+            dayItems.forEach(item => {
+                const subj = AppState.subjects.find(s => s.id === item.subjectId) || { title: "General", gradientIndex: 0 };
+                const gradient = SUBJECT_GRADIENTS[subj.gradientIndex || 0] || SUBJECT_GRADIENTS[0];
+                const rem = calculateRemainingTime(item.dueDate);
+                const isTask = item.kind === 'task';
+
+                const card = document.createElement('div');
+                card.className = `week-agenda-card ${item.completed ? 'is-completed' : ''}`;
+                card.draggable = true;
+                card.style.borderLeftColor = gradient.primary || 'var(--color-primary)';
+
+                card.addEventListener('dragstart', (e) => {
+                    e.dataTransfer.setData('text/plain', item.id);
+                    card.classList.add('is-dragging');
+                });
+                card.addEventListener('dragend', () => card.classList.remove('is-dragging'));
+
+                card.innerHTML = `
+                    <div class="week-card-top">
+                        <span class="week-card-subj" style="color: ${gradient.primary || 'var(--color-primary)'};">${escapeHtml(subj.title)}</span>
+                        <span class="compact-urgency-badge ${rem.urgencyLevel}">${rem.friendlyText}</span>
+                    </div>
+                    <div class="week-card-title">${escapeHtml(item.title)}</div>
+                    <div class="week-card-meta">
+                        <span><span class="meta-icon">${isTask ? ICONS.task : ICONS.event}</span> ${escapeHtml(item.typeName || (isTask ? 'Task' : 'Event'))}</span>
+                    </div>
+                `;
+
+                card.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    openItemModal(item.id);
+                });
+
+                cardsWrap.appendChild(card);
+            });
+        }
+
+        weekWrap.appendChild(col);
+    }
+
+    wrapper.appendChild(weekWrap);
 }

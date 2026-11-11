@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calculateRemainingTime, formatDate, sortItemsChronologically } from '../app/js/dateUtils.js';
+import { calculateRemainingTime, formatDate, sortItemsChronologically, parseQuickTaskInput } from '../app/js/dateUtils.js';
 
 describe('Date Utilities & Urgency Engine', () => {
     it('should calculate remaining time for future tasks (>48 hours)', () => {
@@ -45,5 +45,25 @@ describe('Date Utilities & Urgency Engine', () => {
 
         const sorted = sortItemsChronologically(items);
         expect(sorted.map(i => i.id)).toEqual(['2', '3', '1']);
+    });
+
+    it('should parse quick task input with relative dates and types', () => {
+        const res1 = parseQuickTaskInput('HW 4 due tomorrow');
+        expect(res1.title).toBe('HW 4');
+        expect(res1.kind).toBe('task');
+        expect(res1.dueDate).toBeTruthy();
+
+        const res2 = parseQuickTaskInput('Fluid Mechanics Midterm on friday');
+        expect(res2.title).toBe('Fluid Mechanics Midterm');
+        expect(res2.kind).toBe('event');
+        expect(res2.dueDate).toBeTruthy();
+
+        const res3 = parseQuickTaskInput('Project Presentation in 3 days');
+        expect(res3.title).toBe('Project Presentation');
+        expect(res3.kind).toBe('event');
+
+        const res4 = parseQuickTaskInput('Read Chapter 5');
+        expect(res4.title).toBe('Read Chapter 5');
+        expect(res4.kind).toBe('task');
     });
 });

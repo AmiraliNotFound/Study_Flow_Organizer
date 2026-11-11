@@ -68,6 +68,7 @@ export function openItemModal(itemId = null, preselectedSubjectId = null, defaul
             const d = new Date(item.dueDate);
             if (datePicker) datePicker.setDate(d, false);
             if (timePicker) timePicker.setTime(d.getHours(), d.getMinutes(), false);
+            document.querySelectorAll('.date-preset-chip').forEach(b => b.classList.remove('active'));
         }
     } else {
         modalTitle.textContent = defaultKind === 'task' ? 'Add Task' : 'Add Event';
@@ -81,6 +82,7 @@ export function openItemModal(itemId = null, preselectedSubjectId = null, defaul
         const tomorrow = initialDueDate ? new Date(initialDueDate) : getDatePreset(1, 23, 59);
         if (datePicker) datePicker.setDate(tomorrow, false);
         if (timePicker) timePicker.setTime(tomorrow.getHours() || 23, tomorrow.getMinutes() || 59, false);
+        document.querySelectorAll('.date-preset-chip').forEach(b => b.classList.toggle('active', b.dataset.preset === 'tomorrow'));
     }
 
     setKind(activeKind);
@@ -193,6 +195,41 @@ export function initItemModalEvents() {
             initialMinutes: 59
         });
     }
+
+    // 4. Quick Date Preset Chips (1-Click deadline selection)
+    function applyDatePreset(presetKey) {
+        const now = new Date();
+        let target = new Date();
+        if (presetKey === 'today') {
+            target = getDatePreset(0, 23, 59);
+        } else if (presetKey === 'tomorrow') {
+            target = getDatePreset(1, 23, 59);
+        } else if (presetKey === 'this_friday') {
+            const day = now.getDay();
+            const diff = (5 - day + 7) % 7 || 7;
+            target = getDatePreset(diff, 23, 59);
+        } else if (presetKey === 'next_monday') {
+            const day = now.getDay();
+            const diff = (1 - day + 7) % 7 || 7;
+            target = getDatePreset(diff, 23, 59);
+        } else if (presetKey === 'in_7_days') {
+            target = getDatePreset(7, 23, 59);
+        }
+
+        if (datePicker) datePicker.setDate(target, false);
+        if (timePicker) timePicker.setTime(23, 59, false);
+
+        document.querySelectorAll('.date-preset-chip').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.preset === presetKey);
+        });
+    }
+
+    document.querySelectorAll('.date-preset-chip').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            applyDatePreset(btn.dataset.preset);
+        });
+    });
 
     // Segmented tab
     document.getElementById('btnKindTask')?.addEventListener('click', () => setKind('task'));

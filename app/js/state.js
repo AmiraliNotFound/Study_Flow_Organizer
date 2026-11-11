@@ -108,17 +108,22 @@ export function normalizeData(raw) {
             : [...DEFAULT_CONFIG.tags]
     };
 
-    const subjects = Array.isArray(raw.subjects) ? raw.subjects.map((s, idx) => ({
-        id: s.id || `subj_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-        title: s.title || "Subject",
-        code: s.code || "",
-        instructor: s.instructor || "",
-        tags: Array.isArray(s.tags) ? s.tags : [],
-        isPinned: Boolean(s.isPinned),
-        order: typeof s.order === 'number' ? s.order : idx,
-        gradientIndex: typeof s.gradientIndex === 'number' ? s.gradientIndex : Math.floor(Math.random() * 6),
-        createdAt: s.createdAt || new Date().toISOString()
-    })) : [];
+    const subjects = Array.isArray(raw.subjects) ? raw.subjects.map((s, idx) => {
+        const cleanId = (s.id && typeof s.id === 'string' && s.id.trim())
+            ? s.id.trim()
+            : `subj_${Date.now()}_${idx}_${Math.random().toString(36).slice(2, 6)}`;
+        return {
+            id: cleanId,
+            title: s.title || "Subject",
+            code: s.code || "",
+            instructor: s.instructor || "",
+            tags: Array.isArray(s.tags) ? s.tags : [],
+            isPinned: Boolean(s.isPinned),
+            order: typeof s.order === 'number' ? s.order : idx,
+            gradientIndex: typeof s.gradientIndex === 'number' ? s.gradientIndex : Math.floor(Math.random() * 6),
+            createdAt: s.createdAt || new Date().toISOString()
+        };
+    }) : [];
 
     subjects.forEach(s => {
         if (Array.isArray(s.tags)) {
@@ -129,10 +134,13 @@ export function normalizeData(raw) {
     });
 
     const rawItems = Array.isArray(raw.items) ? raw.items : (Array.isArray(raw.tasks) ? raw.tasks : []);
-    const items = rawItems.map(item => {
+    const items = rawItems.map((item, idx) => {
         const isTask = item.kind !== 'event';
+        const cleanId = (item.id && typeof item.id === 'string' && item.id.trim())
+            ? item.id.trim()
+            : `item_${Date.now()}_${idx}_${Math.random().toString(36).slice(2, 6)}`;
         return {
-            id: item.id || `item_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+            id: cleanId,
             kind: isTask ? 'task' : 'event',
             typeId: item.typeId || (isTask ? 'tt_hw' : 'et_quiz'),
             typeName: item.typeName || (isTask ? 'HW' : 'Quiz'),
@@ -152,18 +160,23 @@ export function normalizeData(raw) {
     });
 
     const rawMaterials = Array.isArray(raw.materials) ? raw.materials : [];
-    const materials = rawMaterials.map(mat => ({
-        id: mat.id || `mat_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-        subjectId: mat.subjectId,
-        itemId: mat.itemId || "",
-        name: mat.name || "Course Folder",
-        filePath: mat.filePath || "",
-        typeId: "mat_folder",
-        typeName: "Course Folder",
-        icon: "📁",
-        notes: mat.notes || "",
-        createdAt: mat.createdAt || new Date().toISOString()
-    }));
+    const materials = rawMaterials.map((mat, idx) => {
+        const cleanId = (mat.id && typeof mat.id === 'string' && mat.id.trim())
+            ? mat.id.trim()
+            : `mat_${Date.now()}_${idx}_${Math.random().toString(36).slice(2, 6)}`;
+        return {
+            id: cleanId,
+            subjectId: mat.subjectId,
+            itemId: mat.itemId || "",
+            name: mat.name || "Course Folder",
+            filePath: mat.filePath || "",
+            typeId: "mat_folder",
+            typeName: "Course Folder",
+            icon: "📁",
+            notes: mat.notes || "",
+            createdAt: mat.createdAt || new Date().toISOString()
+        };
+    });
 
     const rawTrash = raw.trash || {};
     const trash = {
@@ -200,6 +213,15 @@ export function setAppStateData(rawData) {
     AppState.materials = normalized.materials;
     AppState.trash = normalized.trash;
     AppState.user = normalized.user;
+
+    // If incoming data was missing any valid IDs, persist the healed state to sanitize storage
+    const hadInvalidItemIds = Array.isArray(rawData?.items) && rawData.items.some(i => !i.id || typeof i.id !== 'string');
+    const hadInvalidSubjIds = Array.isArray(rawData?.subjects) && rawData.subjects.some(s => !s.id || typeof s.id !== 'string');
+    const hadInvalidMatIds = Array.isArray(rawData?.materials) && rawData.materials.some(m => !m.id || typeof m.id !== 'string');
+    if (hadInvalidItemIds || hadInvalidSubjIds || hadInvalidMatIds) {
+        persistCurrentState(true).catch(e => console.warn('[State] Failed to auto-persist repaired IDs:', e));
+    }
+
     notify('data-loaded');
 }
 
@@ -233,10 +255,11 @@ export async function persistCurrentState(silentEvent = false) {
 
 export async function addOrUpdateSubject(subjData) {
     let finalSubj = null;
-    if (subjData.id) {
-        const idx = AppState.subjects.findIndex(s => s.id === subjData.id);
+    const cleanId = (typeof subjData.id === 'string' && subjData.id.trim()) ? subjData.id.trim() : null;
+    if (cleanId) {
+        const idx = AppState.subjects.findIndex(s => s.id === cleanId);
         if (idx !== -1) {
-            AppState.subjects[idx] = { ...AppState.subjects[idx], ...subjData };
+            AppState.subjects[idx] = { ...AppState.subjects[idx], ...subjData, id: cleanId };
             finalSubj = AppState.subjects[idx];
         } else {
             finalSubj = {
@@ -247,13 +270,14 @@ export async function addOrUpdateSubject(subjData) {
                 order: AppState.subjects.length,
                 gradientIndex: typeof subjData.gradientIndex === 'number' ? subjData.gradientIndex : 0,
                 createdAt: subjData.createdAt || new Date().toISOString(),
-                ...subjData
+                ...subjData,
+                id: cleanId
             };
             AppState.subjects.push(finalSubj);
         }
     } else {
+        const newId = `subj_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
         finalSubj = {
-            id: `subj_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
             title: subjData.title,
             code: subjData.code || "",
             tags: Array.isArray(subjData.tags) ? subjData.tags : [],
@@ -261,7 +285,8 @@ export async function addOrUpdateSubject(subjData) {
             order: AppState.subjects.length,
             gradientIndex: typeof subjData.gradientIndex === 'number' ? subjData.gradientIndex : 0,
             createdAt: new Date().toISOString(),
-            ...subjData
+            ...subjData,
+            id: newId
         };
         AppState.subjects.push(finalSubj);
     }
@@ -420,27 +445,30 @@ export async function addGlobalTag(tagName) {
 
 export async function addOrUpdateItem(itemData) {
     let finalItem = null;
-    if (itemData.id) {
-        const idx = AppState.items.findIndex(i => i.id === itemData.id);
+    const cleanId = (typeof itemData.id === 'string' && itemData.id.trim()) ? itemData.id.trim() : null;
+    if (cleanId) {
+        const idx = AppState.items.findIndex(i => i.id === cleanId);
         if (idx !== -1) {
-            AppState.items[idx] = { ...AppState.items[idx], ...itemData };
+            AppState.items[idx] = { ...AppState.items[idx], ...itemData, id: cleanId };
             finalItem = AppState.items[idx];
         } else {
             finalItem = {
                 completed: false,
                 inProgress: Boolean(itemData.inProgress),
                 createdAt: itemData.createdAt || new Date().toISOString(),
-                ...itemData
+                ...itemData,
+                id: cleanId
             };
             AppState.items.push(finalItem);
         }
     } else {
+        const newId = `item_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
         finalItem = {
-            id: `item_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
             completed: false,
             inProgress: Boolean(itemData.inProgress),
             createdAt: new Date().toISOString(),
-            ...itemData
+            ...itemData,
+            id: newId
         };
         AppState.items.push(finalItem);
     }
@@ -452,9 +480,16 @@ export async function addOrUpdateItem(itemData) {
  * Toggle task completion without triggering full-page reload (Req 3)
  */
 export async function toggleItemComplete(itemId, isSilent = false) {
+    if (!itemId) {
+        console.warn('[State] toggleItemComplete called with invalid or empty itemId:', itemId);
+        return null;
+    }
     const item = AppState.items.find(i => i.id === itemId);
     if (item) {
         item.completed = !item.completed;
+        if (item.completed) {
+            item.inProgress = false;
+        }
         await persistCurrentState(isSilent);
         if (isSilent) {
             notify('item-toggled', item);
@@ -466,10 +501,11 @@ export async function toggleItemComplete(itemId, isSilent = false) {
 
 export async function addOrUpdateMaterial(matData) {
     let finalMat = null;
-    if (matData.id) {
-        const idx = AppState.materials.findIndex(m => m.id === matData.id);
+    const cleanId = (typeof matData.id === 'string' && matData.id.trim()) ? matData.id.trim() : null;
+    if (cleanId) {
+        const idx = AppState.materials.findIndex(m => m.id === cleanId);
         if (idx !== -1) {
-            AppState.materials[idx] = { ...AppState.materials[idx], ...matData };
+            AppState.materials[idx] = { ...AppState.materials[idx], ...matData, id: cleanId };
             finalMat = AppState.materials[idx];
         } else {
             finalMat = {
@@ -477,18 +513,20 @@ export async function addOrUpdateMaterial(matData) {
                 typeId: "mat_folder",
                 typeName: "Course Folder",
                 icon: "📁",
-                ...matData
+                ...matData,
+                id: cleanId
             };
             AppState.materials.push(finalMat);
         }
     } else {
+        const newId = `mat_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
         finalMat = {
-            id: `mat_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
             createdAt: new Date().toISOString(),
             typeId: "mat_folder",
             typeName: "Course Folder",
             icon: "📁",
-            ...matData
+            ...matData,
+            id: newId
         };
         AppState.materials.push(finalMat);
     }

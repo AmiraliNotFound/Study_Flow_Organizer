@@ -22,9 +22,10 @@ import {
     restoreItem,
     deleteMaterial,
     togglePinSubject,
-    reorderSubjects
+    reorderSubjects,
+    addOrUpdateItem
 } from '../state.js';
-import { formatDate, calculateRemainingTime, sortItemsChronologically, escapeHtml } from '../dateUtils.js';
+import { formatDate, calculateRemainingTime, sortItemsChronologically, escapeHtml, parseQuickTaskInput } from '../dateUtils.js';
 import { openItemModal } from '../modals/itemModal.js';
 import { openSubjectModal } from '../modals/subjectModal.js';
 import { openFolderModal } from '../modals/folderModal.js';
@@ -104,6 +105,8 @@ export function renderCardsView(container) {
             if (searchInput) searchInput.value = '';
             const clearBtn = document.getElementById('clearSearchBtn');
             if (clearBtn) clearBtn.style.display = 'none';
+            const kbdHint = document.getElementById('searchKbdHint');
+            if (kbdHint) kbdHint.style.display = 'inline-flex';
             renderCardsView(container);
         });
         return;
@@ -189,6 +192,7 @@ function createSubjectCard(subj, container, hasSearch) {
     const banner = document.createElement('div');
     banner.className = 'subject-header-banner';
     banner.style.background = gradient.css;
+    banner.style.color = gradient.contrastText || 'var(--text-primary)';
 
     const tagsHtml = Array.isArray(subj.tags) && subj.tags.length > 0
         ? subj.tags.map(t => `<span class="subject-tag-chip" data-tag="${escapeHtml(t)}" title="Filter by #${escapeHtml(t)}">#${escapeHtml(t)}</span>`).join('')
@@ -400,6 +404,58 @@ function renderCardScheduleTasks(card, subj, scheduleContent, hasSearch, contain
 
         scheduleContent.appendChild(footer);
     }
+
+    // 3. Inline Quick-Add Input (Enter to add task/event directly to this course)
+    const quickAddWrap = document.createElement('div');
+    quickAddWrap.className = 'card-inline-quick-add';
+    quickAddWrap.innerHTML = `
+        <span class="quick-add-plus-icon">${ICONS.plus}</span>
+        <input type="text" class="card-quick-add-input" placeholder="Quick add task... (e.g. HW 3 tomorrow)" title="Type task title and press Enter">
+    `;
+
+    const quickInput = quickAddWrap.querySelector('.card-quick-add-input');
+    quickInput.addEventListener('keydown', async (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const val = quickInput.value.trim();
+            if (!val) return;
+
+            const parsed = parseQuickTaskInput(val);
+            if (!parsed) return;
+
+            const types = parsed.kind === 'task' ? AppState.config.taskTypes : AppState.config.eventTypes;
+            const defaultType = types[0] || { id: 'tt_hw', name: 'HW', icon: '📚' };
+
+            const newItem = {
+                kind: parsed.kind,
+                typeId: defaultType.id,
+                typeName: defaultType.name,
+                typeIcon: defaultType.icon,
+                subjectId: subj.id,
+                title: parsed.title,
+                dueDate: parsed.dueDate,
+                extraInfo: { number: '', location: '', notes: '' }
+            };
+
+            await addOrUpdateItem(newItem);
+            quickInput.value = '';
+
+            // Smoothly refresh this card's schedule pane and count
+            renderCardScheduleTasks(card, subj, scheduleContent, hasSearch, container);
+            const countEl = card.querySelector('.schedule-tab-count');
+            if (countEl) {
+                const updatedCount = AppState.items.filter(i => i.subjectId === subj.id).length;
+                countEl.textContent = updatedCount;
+            }
+
+            showToast({
+                message: `Added "${parsed.title}" to ${subj.title}`,
+                type: 'success'
+            });
+        }
+    });
+
+    scheduleContent.appendChild(quickAddWrap);
 }
 
 /**

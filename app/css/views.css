@@ -12,7 +12,7 @@
 /* Empty Workspace Banner */
 .empty-workspace-banner {
     background: var(--card-surface-glass);
-    border: 1px dashed rgba(237, 221, 212, 0.20);
+    border: 1px dashed var(--card-border-subtle);
     border-radius: var(--radius-lg);
     padding: 48px 24px;
     text-align: center;
@@ -33,7 +33,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--palette-stormy-teal);
+    color: var(--color-primary);
     margin-bottom: 6px;
     font-size: 1.6rem;
 }
@@ -41,7 +41,7 @@
 .empty-workspace-banner h3 {
     font-size: 1.25rem;
     font-weight: 700;
-    color: var(--palette-powder-petal);
+    color: var(--text-primary);
 }
 
 .empty-workspace-banner p {
@@ -99,7 +99,7 @@
     overflow: hidden;
     background: var(--card-surface-glass);
     border: 1px solid var(--card-border);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.40);
+    box-shadow: var(--shadow-md);
     transition: transform 0.24s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.24s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.24s ease;
     display: flex;
     flex-direction: column;
@@ -109,18 +109,18 @@
 .subject-card:hover {
     border-color: var(--card-border-hover);
     transform: translateY(-2px);
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.50);
+    box-shadow: var(--shadow-lg);
 }
 
 /* Pinned Subject Card (Req 9) */
 .subject-card.is-pinned-card {
-    border-color: rgba(45, 212, 191, 0.45);
-    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45), 0 0 16px rgba(45, 212, 191, 0.12);
+    border-color: var(--color-primary);
+    box-shadow: var(--shadow-md), 0 0 16px var(--color-primary-glow);
 }
 
 .pinned-badge {
-    background: rgba(45, 212, 191, 0.2);
-    border: 1px solid rgba(45, 212, 191, 0.45);
+    background: var(--color-primary-subtle);
+    border: 1px solid var(--color-primary);
     color: var(--color-success);
     font-size: 0.68rem;
     font-weight: 700;
@@ -139,7 +139,7 @@
     font-size: 1rem;
     user-select: none;
     transition: opacity 0.2s ease;
-    color: var(--palette-powder-petal);
+    color: var(--text-primary);
 }
 
 .subject-drag-handle:hover {
@@ -152,11 +152,11 @@
 }
 
 .subject-card.drag-over-top {
-    border-top: 3px solid var(--palette-stormy-teal) !important;
+    border-top: 3px solid var(--color-primary) !important;
 }
 
 .subject-card.drag-over-bottom {
-    border-bottom: 3px solid var(--palette-stormy-teal) !important;
+    border-bottom: 3px solid var(--color-primary) !important;
 }
 
 /* Subject Card Header Banner */
@@ -192,11 +192,11 @@
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    color: var(--palette-powder-petal);
-    background: rgba(0, 0, 0, 0.28);
+    color: var(--text-primary);
+    background: var(--card-surface-sunken);
     padding: 3px 8px;
     border-radius: 6px;
-    border: 1px solid rgba(237, 221, 212, 0.16);
+    border: 1px solid var(--card-border-subtle);
 }
 
 .subject-header-actions,
@@ -208,9 +208,9 @@
 
 .subject-action-btn,
 .subject-menu-btn {
-    background: rgba(0, 0, 0, 0.32);
-    border: 1px solid rgba(237, 221, 212, 0.22);
-    color: var(--palette-powder-petal);
+    background: var(--card-surface-sunken);
+    border: 1px solid var(--card-border-subtle);
+    color: var(--text-primary);
     width: 28px;
     height: 28px;
     border-radius: 6px;
@@ -230,12 +230,12 @@
 .subject-action-btn:hover,
 .subject-menu-btn:hover {
     background: var(--color-primary-subtle);
-    border-color: var(--palette-powder-petal);
+    border-color: var(--text-primary);
     transform: scale(1.08);
 }
 
 .subject-menu-btn.btn-pin-subj.is-active-pin {
-    background: rgba(45, 212, 191, 0.35);
+    background: var(--color-primary-subtle);
     border-color: var(--color-primary);
     color: var(--color-success);
 }
@@ -243,7 +243,7 @@
 .subject-title {
     font-size: 1.25rem;
     font-weight: 800;
-    color: var(--palette-powder-petal);
+    color: inherit;
     letter-spacing: -0.2px;
     line-height: 1.25;
     white-space: nowrap;
@@ -255,7 +255,8 @@
 .subject-code-desc {
     font-size: 0.78rem;
     font-weight: 600;
-    color: rgba(237, 221, 212, 0.80);
+    color: inherit;
+    opacity: 0.85;
     margin-top: 3px;
     margin-bottom: 8px;
     font-family: monospace;
@@ -272,9 +273,9 @@
 .subject-tag-chip {
     font-size: 0.68rem;
     font-weight: 700;
-    color: var(--palette-powder-petal);
-    background: rgba(0, 0, 0, 0.32);
-    border: 1px solid rgba(237, 221, 212, 0.18);
+    color: var(--text-primary);
+    background: var(--card-surface-sunken);
+    border: 1px solid var(--card-border-subtle);
     padding: 1px 7px;
     border-radius: 4px;
     cursor: pointer;
@@ -283,7 +284,7 @@
 
 .subject-tag-chip:hover {
     background: var(--color-primary-subtle);
-    border-color: var(--palette-powder-petal);
+    border-color: var(--text-primary);
     transform: translateY(-1px);
 }
 
@@ -293,13 +294,13 @@
     align-items: center;
     gap: 10px;
     font-size: 0.74rem;
-    color: rgba(237, 221, 212, 0.9);
+    color: var(--text-secondary);
 }
 
 .progress-bar-bg {
     flex: 1;
     height: 6px;
-    background: rgba(0, 0, 0, 0.35);
+    background: var(--card-surface-sunken);
     border-radius: 3px;
     overflow: hidden;
 }
@@ -315,7 +316,7 @@
 .card-sub-tabs {
     display: flex;
     background: var(--bg-canvas-deep);
-    border-bottom: 1px solid rgba(237, 221, 212, 0.12);
+    border-bottom: 1px solid var(--card-border-subtle);
     padding: 4px 8px;
     gap: 6px;
 }
@@ -338,14 +339,14 @@
 }
 
 .card-sub-tab-btn:hover {
-    color: var(--palette-powder-petal);
+    color: var(--text-primary);
     background: var(--color-primary-subtle);
 }
 
 .card-sub-tab-btn.active {
-    color: var(--palette-powder-petal);
+    color: var(--text-primary);
     background: var(--color-primary-subtle);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    box-shadow: var(--shadow-sm);
     border: 1px solid var(--color-primary);
 }
 
@@ -382,8 +383,8 @@
 }
 
 .compact-task-item {
-    background: rgba(35, 53, 51, 0.75);
-    border: 1px solid rgba(237, 221, 212, 0.12);
+    background: var(--card-surface-glass);
+    border: 1px solid var(--card-border-subtle);
     border-radius: 8px;
     padding: 9px 12px;
     display: flex;
@@ -394,10 +395,10 @@
 }
 
 .compact-task-item:hover {
-    background: rgba(46, 70, 68, 0.92);
-    border-color: var(--palette-stormy-teal);
+    background: var(--card-surface-hover);
+    border-color: var(--color-primary);
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    box-shadow: var(--shadow-sm);
 }
 
 /* Animated Task Completion Transition (Req 1a) */
@@ -408,7 +409,7 @@
 
 .compact-task-item.is-completed {
     opacity: 0.55;
-    background: rgba(26, 39, 37, 0.4);
+    background: var(--card-surface-sunken);
 }
 
 .compact-task-item.is-completed .compact-task-title {
@@ -417,8 +418,8 @@
 }
 
 .compact-task-item.is-urgent:not(.is-completed) {
-    border-color: var(--palette-tomato-jam);
-    background: rgba(196, 69, 54, 0.18);
+    border-color: var(--color-urgent);
+    background: var(--color-urgent-subtle);
 }
 
 .compact-task-left {
@@ -434,31 +435,44 @@
     width: 18px;
     height: 18px;
     border-radius: 5px;
-    border: 1.5px solid rgba(237, 221, 212, 0.4);
-    background: rgba(30, 46, 44, 0.6);
+    border: 1.5px solid var(--input-border);
+    background: var(--card-surface-glass);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s ease;
+    transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.18s ease, border-color 0.18s ease;
     flex-shrink: 0;
-    color: var(--palette-powder-petal);
+    color: var(--text-primary);
     font-size: 11px;
 }
 
 .compact-task-check:hover,
 .compact-checkbox:hover {
-    border-color: var(--palette-stormy-teal);
+    border-color: var(--color-primary);
     background: var(--color-primary-subtle);
+    transform: scale(1.08);
+}
+
+.compact-task-check:active,
+.compact-checkbox:active {
+    transform: scale(0.85);
+}
+
+@keyframes checkSpringPop {
+    0% { transform: scale(0.7); }
+    55% { transform: scale(1.24); }
+    100% { transform: scale(1); }
 }
 
 .compact-task-check.checked,
 .compact-checkbox.checked,
 .compact-task-item.is-completed .compact-checkbox,
 .kanban-card.is-completed .compact-checkbox {
-    background: var(--palette-stormy-teal);
-    border-color: var(--palette-stormy-teal);
-    color: var(--palette-powder-petal);
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: var(--text-primary);
+    animation: checkSpringPop 0.24s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .task-empty-state {
@@ -467,9 +481,9 @@
     font-size: 0.82rem;
     color: var(--text-muted);
     font-style: italic;
-    background: rgba(26, 39, 37, 0.35);
+    background: var(--card-surface-sunken);
     border-radius: 8px;
-    border: 1px dashed rgba(237, 221, 212, 0.14);
+    border: 1px dashed var(--card-border-subtle);
     margin: 4px 0;
 }
 
@@ -491,14 +505,14 @@
     padding: 1px 6px;
     border-radius: 4px;
     background: var(--color-primary-subtle);
-    color: var(--palette-powder-petal);
+    color: var(--text-primary);
     flex-shrink: 0;
 }
 
 .compact-task-title {
     font-size: 0.82rem;
     font-weight: 600;
-    color: var(--palette-powder-petal);
+    color: var(--text-primary);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -516,10 +530,10 @@
     font-weight: 700;
 }
 
-.compact-urgency-badge.urgent { color: var(--palette-tomato-jam); }
-.compact-urgency-badge.overdue { color: var(--palette-tomato-jam); }
-.compact-urgency-badge.medium { color: var(--palette-chestnut); }
-.compact-urgency-badge.calm { color: var(--palette-stormy-teal); }
+.compact-urgency-badge.urgent { color: var(--color-urgent); }
+.compact-urgency-badge.overdue { color: var(--color-urgent); }
+.compact-urgency-badge.medium { color: var(--color-warning); }
+.compact-urgency-badge.calm { color: var(--color-primary); }
 .compact-urgency-badge.completed { color: var(--color-success); }
 
 .compact-task-actions {
@@ -535,8 +549,8 @@
 }
 
 .compact-action-btn {
-    background: rgba(0, 0, 0, 0.22);
-    border: 1px solid rgba(237, 221, 212, 0.12);
+    background: var(--card-surface-sunken);
+    border: 1px solid var(--card-border-subtle);
     color: var(--text-muted);
     border-radius: 6px;
     width: 26px;
@@ -550,31 +564,80 @@
 
 .compact-action-btn:hover {
     background: var(--color-primary-subtle);
-    border-color: var(--palette-stormy-teal);
-    color: var(--palette-powder-petal);
+    border-color: var(--color-primary);
+    color: var(--text-primary);
     transform: scale(1.05);
 }
 
 .compact-action-btn.btn-del:hover {
-    background: rgba(196, 69, 54, 0.35);
-    border-color: var(--palette-tomato-jam);
-    color: var(--palette-powder-petal);
+    background: var(--color-urgent-subtle);
+    border-color: var(--color-urgent);
+    color: var(--text-primary);
 }
 
 /* Customized Show More Toggle Button (Req 1b) */
 .card-drawer-footer {
     padding: 8px 14px 10px;
-    border-top: 1px solid rgba(237, 221, 212, 0.08);
+    border-top: 1px solid var(--card-border-subtle);
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: rgba(20, 32, 30, 0.6);
+    background: var(--card-surface-sunken);
+}
+
+/* Card Inline Quick Add Task */
+.card-inline-quick-add {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    background: var(--card-surface-sunken);
+    border: 1px dashed var(--card-border-subtle);
+    border-radius: var(--radius-sm);
+    margin-top: 6px;
+    transition: var(--transition-smooth);
+}
+
+.card-inline-quick-add:focus-within {
+    border-color: var(--color-primary);
+    background: var(--card-surface-sunken);
+    border-style: solid;
+    box-shadow: 0 0 10px var(--color-primary-glow);
+}
+
+.quick-add-plus-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.card-inline-quick-add:focus-within .quick-add-plus-icon {
+    color: var(--color-primary);
+    transform: rotate(90deg);
+}
+
+.card-quick-add-input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text-primary);
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.card-quick-add-input::placeholder {
+    color: var(--text-muted);
+    font-size: 0.78rem;
 }
 
 .card-expand-toggle-btn {
     background: var(--color-primary-subtle);
     border: 1px solid var(--color-primary-subtle);
-    color: var(--palette-powder-petal);
+    color: var(--text-primary);
     font-size: 0.76rem;
     font-weight: 700;
     padding: 5px 12px;
@@ -588,14 +651,14 @@
 
 .card-expand-toggle-btn:hover {
     background: var(--color-primary-subtle);
-    border-color: var(--palette-stormy-teal);
+    border-color: var(--color-primary);
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    box-shadow: var(--shadow-sm);
 }
 
 .card-expand-toggle-btn.is-expanded {
     background: var(--card-surface-glass);
-    border-color: rgba(237, 221, 212, 0.2);
+    border-color: var(--card-border-subtle);
 }
 
 .expand-chevron-icon {
@@ -617,7 +680,7 @@
 /* Folder Item Card */
 .folder-item-card {
     background: var(--card-surface-glass);
-    border: 1px solid rgba(237, 221, 212, 0.12);
+    border: 1px solid var(--card-border-subtle);
     border-radius: 8px;
     padding: 8px 10px;
     display: flex;
@@ -628,14 +691,14 @@
 }
 
 .folder-item-card:hover {
-    background: rgba(46, 70, 68, 0.9);
-    border-color: var(--palette-stormy-teal);
+    background: var(--card-surface-hover);
+    border-color: var(--color-primary);
 }
 
 .folder-name-tag {
     font-size: 0.82rem;
     font-weight: 700;
-    color: var(--palette-powder-petal);
+    color: var(--text-primary);
     display: flex;
     align-items: center;
     gap: 6px;
@@ -659,7 +722,7 @@
     border: 1px solid var(--card-border);
     border-radius: var(--radius-md);
     padding: 20px;
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+    box-shadow: var(--shadow-lg);
 }
 
 .calendar-nav-header {
@@ -670,7 +733,7 @@
     gap: 14px;
     margin-bottom: 20px;
     padding-bottom: 16px;
-    border-bottom: 1px solid rgba(237, 221, 212, 0.1);
+    border-bottom: 1px solid var(--card-border-subtle);
 }
 
 .calendar-title-group {
@@ -683,7 +746,7 @@
 .calendar-month-heading {
     font-size: 1.45rem;
     font-weight: 800;
-    color: var(--palette-powder-petal);
+    color: var(--text-primary);
     margin: 0;
 }
 
@@ -696,7 +759,7 @@
 .calendar-shamsi-badge {
     background: var(--color-primary-subtle);
     border: 1px solid var(--color-primary-subtle);
-    color: var(--palette-stormy-teal);
+    color: var(--color-primary);
     font-size: 0.78rem;
     font-weight: 700;
     padding: 4px 10px;
@@ -707,6 +770,240 @@
     display: flex;
     align-items: center;
     gap: 6px;
+}
+
+/* Calendar Mode Toggle (Month vs Week Agenda) */
+.calendar-mode-pill-toggle {
+    display: inline-flex;
+    align-items: center;
+    background: var(--card-surface-sunken);
+    border: 1px solid var(--card-border-subtle);
+    border-radius: var(--radius-sm);
+    padding: 2px;
+    gap: 2px;
+    margin-right: 6px;
+}
+
+.cal-mode-btn {
+    padding: 4px 10px;
+    border-radius: calc(var(--radius-sm) - 2px);
+    background: transparent;
+    border: none;
+    outline: none;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: var(--transition-smooth);
+}
+
+.cal-mode-btn:hover {
+    color: var(--text-primary);
+}
+
+.cal-mode-btn.active {
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+    box-shadow: 0 1px 6px var(--color-primary-glow);
+}
+
+/* Drag over day highlight */
+.calendar-day-cell.drag-over-day,
+.week-agenda-col.drag-over-day {
+    border-color: var(--color-primary) !important;
+    background: var(--color-primary-subtle) !important;
+    box-shadow: 0 0 16px var(--color-primary-glow) !important;
+}
+
+.calendar-item-chip {
+    cursor: grab;
+}
+
+.calendar-item-chip.is-dragging,
+.week-agenda-card.is-dragging {
+    opacity: 0.4;
+    cursor: grabbing;
+}
+
+/* 7-Day Week Agenda Grid */
+.calendar-week-agenda-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 10px;
+    min-height: 520px;
+}
+
+@media (max-width: 1024px) {
+    .calendar-week-agenda-grid {
+        display: flex;
+        overflow-x: auto;
+        padding-bottom: 12px;
+    }
+    .week-agenda-col {
+        min-width: 220px;
+        flex: 1;
+    }
+}
+
+.week-agenda-col {
+    background: var(--card-surface-glass);
+    border: 1px solid var(--card-border-subtle);
+    border-radius: var(--radius-sm);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: var(--transition-smooth);
+}
+
+.week-agenda-col.is-today-col {
+    border-color: var(--color-primary);
+    background: var(--color-primary-subtle);
+}
+
+.week-col-header {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--card-border-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--card-surface-sunken);
+}
+
+.week-col-name {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+}
+
+.week-col-dates {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.week-col-greg {
+    font-size: 0.92rem;
+    font-weight: 800;
+    color: var(--text-primary);
+}
+
+.week-col-greg.today-pill {
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+    padding: 2px 7px;
+    border-radius: 6px;
+    box-shadow: 0 0 10px var(--color-primary-glow);
+}
+
+.week-col-shamsi {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+}
+
+.week-col-cards {
+    padding: 8px;
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 200px;
+}
+
+.week-empty-slot {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    font-size: 0.76rem;
+    font-style: italic;
+    opacity: 0.7;
+}
+
+.week-agenda-card {
+    background: var(--card-surface-glass);
+    border: 1px solid var(--card-border-subtle);
+    border-left: 3.5px solid var(--color-primary);
+    border-radius: 6px;
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    cursor: grab;
+    transition: var(--transition-smooth);
+}
+
+.week-agenda-card:hover {
+    background: var(--card-surface-hover);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}
+
+.week-agenda-card.is-completed {
+    opacity: 0.6;
+}
+
+.week-agenda-card.is-completed .week-card-title {
+    text-decoration: line-through;
+}
+
+.week-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+}
+
+.week-card-subj {
+    font-size: 0.72rem;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.week-card-title {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1.3;
+}
+
+.week-card-meta {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.week-col-footer {
+    padding: 6px 8px;
+    border-top: 1px solid var(--card-border-subtle);
+    background: var(--card-surface-sunken);
+}
+
+.btn-week-add-task {
+    width: 100%;
+    background: transparent;
+    border: none;
+    padding: 4px;
+    border-radius: 4px;
+    color: var(--text-muted);
+    font-size: 0.74rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+
+.btn-week-add-task:hover {
+    background: var(--card-surface-hover);
+    color: var(--color-primary);
 }
 
 .calendar-weekdays-row {
@@ -734,8 +1031,8 @@
 
 .calendar-day-cell {
     min-height: 105px;
-    background: rgba(30, 46, 44, 0.55);
-    border: 1px solid rgba(237, 221, 212, 0.10);
+    background: var(--card-surface-glass);
+    border: 1px solid var(--card-border-subtle);
     border-radius: 8px;
     padding: 8px 6px;
     display: flex;
@@ -745,19 +1042,19 @@
 }
 
 .calendar-day-cell:hover {
-    background: rgba(36, 56, 54, 0.85);
+    background: var(--card-surface-hover);
     border-color: var(--color-primary-subtle);
 }
 
 .calendar-day-cell.other-month {
     opacity: 0.35;
-    background: rgba(20, 30, 28, 0.4);
+    background: var(--card-surface-sunken);
 }
 
 .calendar-day-cell.is-today-cell {
     border-color: var(--color-primary);
-    background: rgba(45, 212, 191, 0.08);
-    box-shadow: 0 0 14px rgba(45, 212, 191, 0.18);
+    background: var(--color-primary-subtle);
+    box-shadow: 0 0 14px var(--color-primary-glow);
 }
 
 .calendar-day-header {
@@ -776,12 +1073,12 @@
 .day-greg-num {
     font-size: 0.88rem;
     font-weight: 700;
-    color: var(--palette-powder-petal);
+    color: var(--text-primary);
 }
 
 .day-greg-num.today-pill {
     background: var(--color-primary);
-    color: #162221;
+    color: var(--color-on-primary);
     width: 22px;
     height: 22px;
     border-radius: 50%;
@@ -800,8 +1097,8 @@
 .btn-cal-add-day {
     opacity: 0;
     background: var(--color-primary-subtle);
-    border: 1px solid var(--palette-stormy-teal);
-    color: var(--palette-powder-petal);
+    border: 1px solid var(--color-primary);
+    color: var(--text-primary);
     width: 18px;
     height: 18px;
     border-radius: 50%;
@@ -818,7 +1115,7 @@
 }
 
 .btn-cal-add-day:hover {
-    background: var(--palette-stormy-teal);
+    background: var(--color-primary);
     transform: scale(1.15);
 }
 
@@ -832,8 +1129,8 @@
 }
 
 .calendar-item-chip {
-    background: rgba(20, 32, 30, 0.85);
-    border: 1px solid rgba(237, 221, 212, 0.12);
+    background: var(--card-surface-glass);
+    border: 1px solid var(--card-border-subtle);
     border-left-width: 3px;
     border-radius: 4px;
     padding: 2px 6px;
@@ -849,7 +1146,7 @@
 }
 
 .calendar-item-chip:hover {
-    background: rgba(30, 48, 45, 0.95);
+    background: var(--card-surface-hover);
     transform: translateX(1px);
 }
 
@@ -869,7 +1166,7 @@
 .chip-title {
     overflow: hidden;
     text-overflow: ellipsis;
-    color: var(--palette-powder-petal);
+    color: var(--text-primary);
     font-weight: 600;
 }
 
@@ -894,7 +1191,7 @@
 .timeline-header-box h2 {
     font-size: 1.3rem;
     font-weight: 800;
-    color: var(--palette-powder-petal);
+    color: var(--text-primary);
     margin-bottom: 4px;
 }
 
@@ -917,7 +1214,7 @@
     top: 14px;
     bottom: 14px;
     width: 2px;
-    background: linear-gradient(180deg, var(--palette-stormy-teal) 0%, var(--color-primary-subtle) 60%, var(--card-surface-glass) 100%);
+    background: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-subtle) 60%, var(--card-surface-glass) 100%);
     border-radius: 2px;
 }
 
@@ -969,19 +1266,19 @@
     height: 24px;
     border-radius: 50%;
     background: var(--color-primary);
-    box-shadow: 0 0 16px rgba(45, 212, 191, 0.8);
+    box-shadow: 0 0 16px var(--color-primary-glow);
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #ffffff;
+    color: var(--color-on-primary);
     font-size: 0.8rem;
     z-index: 2;
 }
 
 .timeline-now-pill {
-    background: rgba(24, 38, 36, 0.92);
-    border: 1px solid rgba(45, 212, 191, 0.5);
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+    background: var(--card-surface-elevated);
+    border: 1px solid var(--color-primary);
+    box-shadow: var(--shadow-md);
     padding: 6px 14px;
     border-radius: 20px;
     display: inline-flex;
@@ -997,7 +1294,7 @@
 }
 
 .timeline-now-pill .pill-date {
-    color: var(--palette-powder-petal);
+    color: var(--text-primary);
 }
 
 .anchor-highlight {
@@ -1022,8 +1319,8 @@
 }
 
 .timeline-gap-indicator {
-    background: rgba(24, 38, 36, 0.95);
-    border: 1px dashed rgba(237, 221, 212, 0.22);
+    background: var(--card-surface-sunken);
+    border: 1px dashed var(--card-border-subtle);
     border-radius: 12px;
     padding: 3px 10px;
     font-size: 0.68rem;
@@ -1032,12 +1329,12 @@
     align-items: center;
     gap: 5px;
     z-index: 1;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+    box-shadow: var(--shadow-sm);
 }
 
 .timeline-gap-spacer.is-past-gap .timeline-gap-indicator {
-    background: rgba(30, 46, 44, 0.45);
-    border-color: rgba(237, 221, 212, 0.1);
+    background: var(--card-surface-sunken);
+    border-color: var(--card-border-subtle);
     color: var(--text-muted);
 }
 
@@ -1073,21 +1370,21 @@
     width: 14px;
     height: 14px;
     border-radius: 50%;
-    background: var(--palette-stormy-teal);
-    border: 3px solid var(--palette-dark-slate);
+    background: var(--color-primary);
+    border: 3px solid var(--card-surface);
     box-shadow: 0 0 8px var(--color-primary-glow);
     z-index: 2;
     transition: var(--transition-smooth);
 }
 
 .timeline-node.is-urgent .timeline-node-dot {
-    background: var(--palette-tomato-jam);
+    background: var(--color-urgent);
     box-shadow: 0 0 10px var(--color-urgent-glow);
 }
 
 .timeline-node.is-completed .timeline-node-dot {
     background: var(--color-primary);
-    box-shadow: 0 0 8px rgba(45, 212, 191, 0.5);
+    box-shadow: 0 0 8px var(--color-primary-glow);
 }
 
 .timeline-node-card {
@@ -1095,7 +1392,7 @@
     border: 1px solid var(--card-border);
     border-radius: var(--radius-sm);
     padding: 12px 16px;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+    box-shadow: var(--shadow-md);
     transition: var(--transition-smooth);
 }
 
@@ -1105,7 +1402,7 @@
 }
 
 .timeline-node.is-urgent .timeline-node-card {
-    border-color: var(--palette-tomato-jam);
+    border-color: var(--color-urgent);
 }
 
 .timeline-card-header {
@@ -1122,7 +1419,7 @@
     font-weight: 700;
     padding: 2px 8px;
     border-radius: 6px;
-    color: var(--palette-powder-petal);
+    color: var(--text-primary);
     display: inline-flex;
     align-items: center;
     gap: 5px;
@@ -1144,7 +1441,7 @@
 .timeline-item-title {
     font-weight: 700;
     font-size: 0.95rem;
-    color: var(--palette-powder-petal);
+    color: var(--text-primary);
     margin-bottom: 3px;
 }
 
@@ -1173,9 +1470,9 @@
 }
 
 .timeline-dots-menu-btn {
-    background: rgba(0, 0, 0, 0.25);
-    border: 1px solid rgba(237, 221, 212, 0.18);
-    color: var(--palette-powder-petal);
+    background: var(--card-surface-sunken);
+    border: 1px solid var(--card-border-subtle);
+    color: var(--text-primary);
     width: 28px;
     height: 28px;
     border-radius: 6px;
@@ -1188,7 +1485,7 @@
 
 .timeline-dots-menu-btn:hover {
     background: var(--color-primary-subtle);
-    border-color: var(--palette-stormy-teal);
+    border-color: var(--color-primary);
     transform: scale(1.06);
 }
 
@@ -1198,7 +1495,7 @@
     top: calc(100% + 4px);
     background: var(--bg-canvas-deep) !important;
     border: 1px solid var(--card-border);
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.75), 0 0 0 1px var(--card-border);
+    box-shadow: var(--shadow-lg), 0 0 0 1px var(--card-border);
     border-radius: var(--radius-sm);
     padding: 4px;
     min-width: 130px;
@@ -1215,7 +1512,7 @@
 .timeline-dropdown-item {
     background: transparent;
     border: none;
-    color: var(--palette-powder-petal);
+    color: var(--text-primary);
     font-size: 0.8rem;
     font-weight: 600;
     padding: 7px 10px;
@@ -1234,11 +1531,11 @@
 }
 
 .timeline-dropdown-item.danger {
-    color: var(--palette-tomato-jam);
+    color: var(--color-urgent);
 }
 
 .timeline-dropdown-item.danger:hover {
-    background: rgba(196, 69, 54, 0.2);
+    background: var(--color-urgent-subtle);
 }
 
 /* ==========================================================================
@@ -1247,6 +1544,102 @@
    ========================================================================== */
 .kanban-view-wrapper {
     width: 100%;
+}
+
+/* ==========================================================================
+   4. KANBAN BOARD VIEW
+   ========================================================================== */
+
+/* Kanban Course Filter Strip */
+.kanban-course-filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding: 8px 14px;
+    background: var(--card-surface-glass);
+    border: 1px solid var(--card-border-subtle);
+    border-radius: var(--radius-md);
+    overflow-x: auto;
+    user-select: none;
+}
+
+.kanban-filter-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+.kanban-course-pills {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.kanban-course-pill {
+    padding: 4px 12px;
+    background: transparent;
+    border: 1px solid var(--card-border-subtle);
+    border-radius: 16px;
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: var(--transition-smooth);
+    white-space: nowrap;
+    font-feature-settings: "tnum" 1;
+}
+
+.kanban-course-pill:hover {
+    background: var(--card-surface-hover);
+    color: var(--text-primary);
+}
+
+.kanban-course-pill.active {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: var(--color-on-primary);
+    box-shadow: 0 2px 8px var(--color-primary-glow);
+}
+
+/* Kanban Inline Quick Add */
+.kanban-inline-quick-add {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--card-surface-sunken);
+    border: 1px dashed var(--card-border-subtle);
+    border-radius: var(--radius-sm);
+    margin-top: 6px;
+    transition: var(--transition-smooth);
+}
+
+.kanban-inline-quick-add:focus-within {
+    border-color: var(--color-primary);
+    background: var(--card-surface-sunken);
+    border-style: solid;
+    box-shadow: 0 0 10px var(--color-primary-glow);
+}
+
+.kanban-quick-add-input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text-primary);
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.kanban-quick-add-input::placeholder {
+    color: var(--text-muted);
+    font-size: 0.78rem;
 }
 
 .kanban-board-wrapper {
@@ -1272,29 +1665,29 @@
 }
 
 .kanban-column {
-    background: rgba(30, 46, 44, 0.78);
+    background: var(--card-surface-glass);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(237, 221, 212, 0.12);
+    border: 1px solid var(--card-border-subtle);
     border-radius: var(--radius-md);
     display: flex;
     flex-direction: column;
     min-height: 520px;
     max-height: calc(100vh - 210px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    box-shadow: var(--shadow-md);
     transition: var(--transition-smooth);
     overflow: hidden;
 }
 
 .kanban-column.drag-over {
-    border-color: var(--palette-stormy-teal);
-    background: rgba(35, 56, 54, 0.92);
+    border-color: var(--color-primary);
+    background: var(--card-surface-hover);
     box-shadow: 0 0 20px var(--color-primary-subtle);
 }
 
 .kanban-column-header {
     padding: 14px 16px 12px;
-    border-bottom: 1px solid rgba(237, 221, 212, 0.1);
+    border-bottom: 1px solid var(--card-border-subtle);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -1318,14 +1711,14 @@
 .kanban-column-title {
     font-size: 0.95rem;
     font-weight: 800;
-    color: var(--palette-powder-petal);
+    color: var(--text-primary);
 }
 
 .kanban-column-badge,
 .kanban-count-pill {
-    background: rgba(0, 0, 0, 0.35);
-    border: 1px solid rgba(237, 221, 212, 0.15);
-    color: var(--palette-powder-petal);
+    background: var(--card-surface-sunken);
+    border: 1px solid var(--card-border-subtle);
+    color: var(--text-primary);
     font-size: 0.74rem;
     font-weight: 700;
     padding: 2px 8px;
@@ -1353,12 +1746,12 @@
 }
 .kanban-column-cards::-webkit-scrollbar-thumb,
 .kanban-cards-list::-webkit-scrollbar-thumb {
-    background: rgba(237, 221, 212, 0.18);
+    background: var(--scrollbar-thumb);
     border-radius: 3px;
 }
 .kanban-column-cards::-webkit-scrollbar-thumb:hover,
 .kanban-cards-list::-webkit-scrollbar-thumb:hover {
-    background: rgba(237, 221, 212, 0.38);
+    background: var(--scrollbar-thumb-hover);
 }
 
 .kanban-empty-slot {
@@ -1367,26 +1760,26 @@
     align-items: center;
     justify-content: center;
     min-height: 180px;
-    border: 2px dashed rgba(237, 221, 212, 0.14);
+    border: 2px dashed var(--card-border-subtle);
     border-radius: var(--radius-sm);
     color: var(--text-muted);
     font-size: 0.85rem;
     font-weight: 600;
     letter-spacing: 0.3px;
-    background: rgba(0, 0, 0, 0.12);
+    background: var(--card-surface-sunken);
     transition: var(--transition-smooth);
     user-select: none;
 }
 
 .kanban-column.drag-over .kanban-empty-slot {
-    border-color: var(--palette-stormy-teal);
-    color: var(--palette-powder-petal);
+    border-color: var(--color-primary);
+    color: var(--text-primary);
     background: var(--color-primary-subtle);
 }
 
 .kanban-card {
     background: var(--card-surface-glass);
-    border: 1px solid rgba(237, 221, 212, 0.14);
+    border: 1px solid var(--card-border-subtle);
     border-radius: var(--radius-sm);
     padding: 12px;
     display: flex;
@@ -1394,7 +1787,7 @@
     gap: 8px;
     cursor: grab;
     transition: var(--transition-smooth);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    box-shadow: var(--shadow-sm);
     user-select: none;
     flex-shrink: 0;
 }
@@ -1402,7 +1795,7 @@
 .kanban-card:hover {
     border-color: var(--card-border-hover);
     transform: translateY(-2px);
-    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
+    box-shadow: var(--shadow-md);
 }
 
 .kanban-card.is-dragging {
@@ -1412,8 +1805,8 @@
 }
 
 .kanban-card.is-urgent:not(.is-completed) {
-    border-left: 3px solid var(--palette-tomato-jam);
-    box-shadow: inset 0 0 12px rgba(196, 69, 54, 0.12), 0 4px 12px rgba(0, 0, 0, 0.25);
+    border-left: 3px solid var(--color-urgent);
+    box-shadow: inset 0 0 12px var(--color-urgent-subtle), var(--shadow-sm);
 }
 
 .kanban-card.is-completed {
@@ -1436,7 +1829,7 @@
 .kanban-card-subject-tag {
     font-size: 0.7rem;
     font-weight: 700;
-    color: #fff;
+    color: var(--color-on-primary);
     padding: 2px 8px;
     border-radius: 4px;
     display: inline-block;
@@ -1461,7 +1854,7 @@
 .kanban-card-title {
     font-size: 0.88rem;
     font-weight: 700;
-    color: var(--palette-powder-petal);
+    color: var(--text-primary);
     line-height: 1.35;
     word-break: break-word;
 }
@@ -1484,8 +1877,8 @@
 
 .kanban-card-notes,
 .kanban-notes-preview {
-    background: rgba(24, 36, 35, 0.65);
-    border: 1px solid rgba(237, 221, 212, 0.08);
+    background: var(--card-surface-sunken);
+    border: 1px solid var(--card-border-subtle);
     border-radius: 6px;
     padding: 6px 8px;
     font-size: 0.76rem;
@@ -1514,7 +1907,7 @@
     justify-content: space-between;
     font-size: 0.72rem;
     color: var(--text-muted);
-    border-top: 1px solid rgba(237, 221, 212, 0.08);
+    border-top: 1px solid var(--card-border-subtle);
     padding-top: 6px;
     margin-top: 2px;
 }
@@ -1531,85 +1924,7 @@
     vertical-align: -2px;
 }
 
-/* ==========================================================================
-   5. TOPIC TAGS FILTER STRIP ROW (Req 2)
-   ========================================================================== */
-.tags-filter-strip-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
-    background: rgba(20, 32, 30, 0.55);
-    border-top: 1px solid rgba(237, 221, 212, 0.08);
-    border-radius: 0 0 var(--radius-sm) var(--radius-sm);
-    overflow-x: auto;
-}
 
-.tags-filter-title {
-    font-size: 0.74rem;
-    font-weight: 700;
-    color: var(--text-muted);
-    white-space: nowrap;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.tags-pills-scroll-wrap {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    flex: 1;
-    overflow-x: auto;
-    padding: 2px 0;
-}
-
-.tag-filter-pill {
-    background: rgba(35, 53, 51, 0.7);
-    border: 1px solid rgba(237, 221, 212, 0.14);
-    color: var(--palette-powder-petal);
-    font-size: 0.74rem;
-    font-weight: 600;
-    padding: 3px 10px;
-    border-radius: 14px;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: all 0.2s ease;
-}
-
-.tag-filter-pill:hover {
-    background: var(--color-primary-subtle);
-    border-color: var(--palette-stormy-teal);
-    transform: translateY(-1px);
-}
-
-.tag-filter-pill.active {
-    background: var(--palette-stormy-teal);
-    border-color: var(--palette-stormy-teal);
-    color: #ffffff;
-    box-shadow: 0 2px 8px var(--color-primary-glow);
-}
-
-.btn-add-tag-filter {
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    background: var(--color-primary-subtle);
-    border: 1px dashed var(--palette-stormy-teal);
-    color: var(--palette-powder-petal);
-    font-size: 11px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    flex-shrink: 0;
-}
-
-.btn-add-tag-filter:hover {
-    background: var(--palette-stormy-teal);
-    border-style: solid;
-    transform: scale(1.1);
-}
 
 /* ==========================================================================
    6. SETTINGS PALETTE SELECTOR & CUSTOM 5-COLOR (Req 3)
@@ -1622,8 +1937,8 @@
 }
 
 .palette-card-option {
-    background: rgba(30, 46, 44, 0.6);
-    border: 1.5px solid rgba(237, 221, 212, 0.14);
+    background: var(--card-surface-glass);
+    border: 1.5px solid var(--card-border-subtle);
     border-radius: var(--radius-sm);
     padding: 10px 8px;
     cursor: pointer;
@@ -1636,12 +1951,12 @@
 }
 
 .palette-card-option:hover {
-    border-color: var(--palette-stormy-teal);
+    border-color: var(--color-primary);
     background: var(--card-surface-glass);
 }
 
 .palette-card-option.is-active {
-    border-color: var(--palette-stormy-teal);
+    border-color: var(--color-primary);
     background: var(--color-primary-subtle);
     box-shadow: 0 0 14px var(--color-primary-glow);
 }
@@ -1653,7 +1968,7 @@
 .palette-card-title {
     font-size: 0.78rem;
     font-weight: 700;
-    color: var(--palette-powder-petal);
+    color: var(--text-primary);
 }
 
 .palette-card-desc {
@@ -1666,8 +1981,8 @@
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(95px, 1fr));
     gap: 8px;
-    background: rgba(20, 32, 30, 0.7);
-    border: 1px solid rgba(237, 221, 212, 0.12);
+    background: var(--card-surface-sunken);
+    border: 1px solid var(--card-border-subtle);
     border-radius: var(--radius-sm);
     padding: 10px;
     margin-top: 8px;
@@ -1689,7 +2004,7 @@
     width: 100%;
     height: 32px;
     border-radius: 6px;
-    border: 1px solid rgba(237, 221, 212, 0.2);
+    border: 1px solid var(--card-border-subtle);
     background: transparent;
     cursor: pointer;
     padding: 0;
@@ -1699,9 +2014,9 @@
    7. COURSE TRASH MODAL (Req 7)
    ========================================================================== */
 .trash-count-badge {
-    background: rgba(196, 69, 54, 0.2);
-    border: 1px solid rgba(196, 69, 54, 0.45);
-    color: var(--palette-tomato-jam);
+    background: var(--color-urgent-subtle);
+    border: 1px solid var(--color-urgent);
+    color: var(--color-urgent);
     font-size: 0.72rem;
     font-weight: 700;
     padding: 2px 8px;
@@ -1715,8 +2030,8 @@
 }
 
 .trash-item-row {
-    background: rgba(30, 46, 44, 0.65);
-    border: 1px solid rgba(237, 221, 212, 0.12);
+    background: var(--card-surface-glass);
+    border: 1px solid var(--card-border-subtle);
     border-radius: var(--radius-sm);
     padding: 10px 14px;
     display: flex;
@@ -1727,8 +2042,8 @@
 }
 
 .trash-item-row:hover {
-    border-color: rgba(237, 221, 212, 0.25);
-    background: rgba(36, 56, 54, 0.85);
+    border-color: var(--card-border-hover);
+    background: var(--card-surface-hover);
 }
 
 .trash-item-info {
@@ -1746,7 +2061,7 @@
 .trash-item-name {
     font-size: 0.92rem;
     font-weight: 700;
-    color: var(--palette-powder-petal);
+    color: var(--text-primary);
 }
 
 .trash-item-code {
@@ -1785,7 +2100,7 @@
 
 .empty-trash-box h4 {
     font-size: 1rem;
-    color: var(--palette-powder-petal);
+    color: var(--text-primary);
     margin-bottom: 4px;
 }
 
@@ -1799,8 +2114,8 @@
    8. TAG EDITOR & MODAL TAG MANAGER (Req 2)
    ========================================================================== */
 .tags-editor-box {
-    background: rgba(24, 38, 36, 0.7);
-    border: 1px solid rgba(237, 221, 212, 0.12);
+    background: var(--card-surface-sunken);
+    border: 1px solid var(--card-border-subtle);
     border-radius: var(--radius-sm);
     padding: 10px;
     display: flex;
@@ -1818,8 +2133,8 @@
 
 .editor-tag-pill {
     background: var(--color-primary-subtle);
-    border: 1px solid var(--palette-stormy-teal);
-    color: var(--palette-powder-petal);
+    border: 1px solid var(--color-primary);
+    color: var(--text-primary);
     font-size: 0.74rem;
     font-weight: 600;
     padding: 2px 8px;
@@ -1832,7 +2147,7 @@
 .btn-tag-remove {
     background: transparent;
     border: none;
-    color: var(--palette-powder-petal);
+    color: var(--text-primary);
     font-size: 12px;
     cursor: pointer;
     padding: 0;
@@ -1845,7 +2160,7 @@
 
 .btn-tag-remove:hover {
     opacity: 1;
-    color: var(--palette-tomato-jam);
+    color: var(--color-urgent);
 }
 
 .tags-input-row {
@@ -1859,12 +2174,12 @@
     align-items: center;
     gap: 5px;
     padding-top: 4px;
-    border-top: 1px solid rgba(237, 221, 212, 0.08);
+    border-top: 1px solid var(--card-border-subtle);
 }
 
 .btn-tag-suggestion {
-    background: rgba(30, 46, 44, 0.6);
-    border: 1px dashed rgba(237, 221, 212, 0.2);
+    background: var(--card-surface-glass);
+    border: 1px dashed var(--card-border-subtle);
     color: var(--text-muted);
     font-size: 0.68rem;
     padding: 2px 7px;
@@ -1874,8 +2189,8 @@
 }
 
 .btn-tag-suggestion:hover {
-    color: var(--palette-powder-petal);
-    border-color: var(--palette-stormy-teal);
+    color: var(--text-primary);
+    border-color: var(--color-primary);
     background: var(--color-primary-subtle);
 }
 
@@ -1891,8 +2206,8 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: rgba(30, 46, 44, 0.6);
-    border: 1px solid rgba(237, 221, 212, 0.12);
+    background: var(--card-surface-glass);
+    border: 1px solid var(--card-border-subtle);
     border-radius: 6px;
     padding: 6px 10px;
 }
@@ -1900,7 +2215,7 @@
 .chip-tag-name {
     font-size: 0.82rem;
     font-weight: 700;
-    color: var(--palette-powder-petal);
+    color: var(--text-primary);
 }
 
 .chip-course-count {
@@ -1921,7 +2236,7 @@
     padding: 10px 18px;
     border-radius: 30px;
     border: 1px solid var(--card-border);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4), 0 0 14px var(--color-primary-glow);
+    box-shadow: var(--shadow-lg), 0 0 14px var(--color-primary-glow);
     font-size: 0.82rem;
     font-weight: 700;
     cursor: pointer;
@@ -1941,5 +2256,5 @@
 .timeline-floating-jump-today:hover {
     background: var(--color-primary-light);
     transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 0 18px var(--color-primary-glow);
+    box-shadow: var(--shadow-lg), 0 0 18px var(--color-primary-glow);
 }

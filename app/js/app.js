@@ -7,7 +7,7 @@ import { AppState, subscribe, setAppStateData, addGlobalTag } from './state.js';
 import { loadData, isServerConnected, openDataDirectory } from './api.js';
 import { formatDate } from './dateUtils.js';
 import { formatDualDate } from './jalali.js';
-import { applyPalette, getActivePaletteId } from './theme.js';
+import { applyPalette, getActivePaletteId, applyThemeStyle, getActiveThemeStyle } from './theme.js';
 
 import { renderCardsView } from './views/cardsView.js';
 import { renderCalendarView } from './views/calendarView.js';
@@ -23,6 +23,7 @@ import { openTrashModal, closeTrashModal, initTrashModalEvents } from './modals/
 import { openAiModal, initAiModalEvents } from './modals/aiModal.js';
 import { initTagModalEvents } from './modals/tagModal.js';
 import { initQuickAiVoiceEvents } from './services/quickAiVoice.js';
+import { initCommandPalette, openCommandPalette } from './components/commandPalette.js';
 
 // Renders the currently selected view
 export function renderActiveView() {
@@ -63,7 +64,7 @@ function updateHeaderDateDisplay() {
         dateHeader.innerHTML = `
             <span>${dual.gregFull}</span>
             <span style="opacity: 0.5; margin: 0 5px;">•</span>
-            <span style="color: var(--palette-stormy-teal); font-weight: 700;">${dual.shamsiFull}</span>
+            <span style="color: var(--color-primary); font-weight: 700;">${dual.shamsiFull}</span>
         `;
     }
 }
@@ -91,8 +92,15 @@ function renderCounters() {
     if (elTotal) elTotal.textContent = String(total);
     if (elTasks) elTasks.textContent = String(tasksCount);
     if (elEvents) elEvents.textContent = String(eventsCount);
-    if (elUrgent) elUrgent.textContent = String(urgentCount);
+    if (elUrgent) {
+        elUrgent.textContent = String(urgentCount);
+        elUrgent.classList.toggle('has-urgent', urgentCount > 0);
+    }
     if (elCompleted) elCompleted.textContent = String(completedCount);
+
+    document.querySelectorAll('.stat-filter-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.filter === AppState.activeFilter);
+    });
 }
 
 // Render dynamic topic tags in the filter row (Req 2)
@@ -159,6 +167,11 @@ function switchView(viewName) {
     if (!VIEW_METADATA[viewName]) return;
     AppState.currentView = viewName;
 
+    // 1-Click Segmented Control Tabs
+    document.querySelectorAll('.segmented-tab').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.view === viewName);
+    });
+
     const activeIcon = document.getElementById('activeViewIcon');
     const activeLabel = document.getElementById('activeViewLabel');
     if (activeIcon) activeIcon.innerHTML = VIEW_METADATA[viewName].icon;
@@ -171,10 +184,13 @@ function switchView(viewName) {
     renderActiveView();
 }
 
-// Filter pills
+// Filter pills & interactive stat buttons
 function setFilter(filterName) {
     AppState.activeFilter = filterName;
     document.querySelectorAll('.filter-pill').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.filter === filterName);
+    });
+    document.querySelectorAll('.stat-filter-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.filter === filterName);
     });
     renderActiveView();
@@ -182,25 +198,12 @@ function setFilter(filterName) {
 
 // Theme Manager (Glassmorphic vs Flat)
 function applyTheme(themeName) {
-    const isFlat = themeName === 'flat';
-    document.body.classList.toggle('theme-flat', isFlat);
-    localStorage.setItem('study_flow_theme_style', isFlat ? 'flat' : 'glass');
-
-    const optGlass = document.getElementById('themeOptionGlass');
-    const optFlat = document.getElementById('themeOptionFlat');
-    if (optGlass && optFlat) {
-        optGlass.classList.toggle('is-active', !isFlat);
-        optFlat.classList.toggle('is-active', isFlat);
-    }
-
-    // Refresh dynamic topic colors/gradients according to flat or glass mode (Req 3)
-    applyPalette(getActivePaletteId());
+    applyThemeStyle(themeName);
 }
 
 function initTheme() {
-    const saved = localStorage.getItem('study_flow_theme_style') || 'glass';
-    applyTheme(saved);
-    applyPalette(getActivePaletteId());
+    const saved = getActiveThemeStyle();
+    applyThemeStyle(saved);
 }
 
 // Setup all event listeners
@@ -234,7 +237,14 @@ function initAppEvents() {
         openFolderModal();
     });
 
-    // 2. Compact View Selector Dropdown
+    // 2. 1-Click Segmented View Switcher Tabs
+    document.querySelectorAll('.segmented-tab').forEach(btn => {
+        btn.addEventListener('click', () => {
+            switchView(btn.dataset.view);
+        });
+    });
+
+    // 2b. Compact View Selector Dropdown (fallback / mobile)
     const viewSelectorBtn = document.getElementById('viewSelectorBtn');
     const viewSelectorMenu = document.getElementById('viewSelectorMenu');
 
@@ -250,6 +260,13 @@ function initAppEvents() {
         });
     });
 
+    // Interactive Stats Filter Buttons
+    document.querySelectorAll('.stat-filter-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            setFilter(btn.dataset.filter);
+        });
+    });
+
     // Close floating menus when clicking outside
     document.addEventListener('click', (e) => {
         if (!createBtn?.contains(e.target) && !createMenu?.contains(e.target)) {
@@ -260,9 +277,9 @@ function initAppEvents() {
         }
     });
 
-    // 3. Settings & Storage Modal
-    document.getElementById('diskSyncBadge')?.addEventListener('click', openBackupModal);
-    document.getElementById('btnSettingsHeader')?.addEventListener('click', openBackupModal);
+    // 3. Settings & Storage Modal (Always opens 2x2 Minimal Landing view)
+    document.getElementById('diskSyncBadge')?.addEventListener('click', () => openBackupModal());
+    document.getElementById('btnSettingsHeader')?.addEventListener('click', () => openBackupModal());
     document.getElementById('settingsModalCloseBtn')?.addEventListener('click', closeBackupModal);
     document.getElementById('btnCloseSettings')?.addEventListener('click', closeBackupModal);
 
@@ -283,17 +300,24 @@ function initAppEvents() {
     // Search bar
     const searchInput = document.getElementById('globalSearchInput');
     const clearSearchBtn = document.getElementById('clearSearchBtn');
+    const searchKbdHint = document.getElementById('searchKbdHint');
 
     searchInput?.addEventListener('input', (e) => {
         AppState.searchQuery = e.target.value;
-        if (clearSearchBtn) clearSearchBtn.style.display = e.target.value ? 'block' : 'none';
+        const hasVal = Boolean(e.target.value);
+        if (clearSearchBtn) clearSearchBtn.style.display = hasVal ? 'flex' : 'none';
+        if (searchKbdHint) searchKbdHint.style.display = hasVal ? 'none' : 'inline-flex';
         renderActiveView();
     });
 
     clearSearchBtn?.addEventListener('click', () => {
-        if (searchInput) searchInput.value = '';
+        if (searchInput) {
+            searchInput.value = '';
+            searchInput.focus();
+        }
         AppState.searchQuery = '';
-        clearSearchBtn.style.display = 'none';
+        if (clearSearchBtn) clearSearchBtn.style.display = 'none';
+        if (searchKbdHint) searchKbdHint.style.display = 'inline-flex';
         renderActiveView();
     });
 
@@ -376,10 +400,22 @@ window.addEventListener('DOMContentLoaded', async () => {
     try { initAiModalEvents(); } catch (e) { console.error('[App] initAiModalEvents error:', e); }
     try { initTagModalEvents(() => { renderTagFilterStrip(); renderActiveView(); }); } catch (e) { console.error('[App] initTagModalEvents error:', e); }
     try { initQuickAiVoiceEvents(); } catch (e) { console.error('[App] initQuickAiVoiceEvents error:', e); }
+    try { initCommandPalette(switchView); } catch (e) { console.error('[App] initCommandPalette error:', e); }
     try { initAppEvents(); } catch (e) { console.error('[App] initAppEvents error:', e); }
 
+    // Instant global re-render on any theme/palette change
+    window.addEventListener('studyflow:themechange', () => {
+        updateHeaderDateDisplay();
+        renderCounters();
+        renderActiveView();
+    });
+
     subscribe((state, eventName) => {
-        if (eventName === 'item-toggled' || eventName === 'silent') return;
+        if (eventName === 'item-toggled') {
+            renderCounters();
+            return;
+        }
+        if (eventName === 'silent') return;
         renderActiveView();
     });
 

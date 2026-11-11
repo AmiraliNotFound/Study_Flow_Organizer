@@ -19,14 +19,17 @@ import {
     deleteItem,
     restoreItem,
     addOrUpdateItem,
+    toggleItemComplete,
     persistCurrentState
 } from '../state.js';
-import { formatDate, calculateRemainingTime, escapeHtml } from '../dateUtils.js';
+import { formatDate, calculateRemainingTime, escapeHtml, parseQuickTaskInput } from '../dateUtils.js';
 import { renderMarkdown, bindMarkdownChecklists } from '../markdown.js';
 import { openItemModal } from '../modals/itemModal.js';
 import { openSubjectModal } from '../modals/subjectModal.js';
 import { ICONS } from '../icons.js';
 import { showToast } from '../toast.js';
+
+let activeKanbanCourseFilter = 'all';
 
 export function renderKanbanView(container) {
     if (!container) return;
@@ -34,7 +37,7 @@ export function renderKanbanView(container) {
 
     // Ignore global status filters (pending/completed/urgent) so all 3 Kanban columns stay populated,
     // while still honoring topic tags, search queries, and task/event kind filters.
-    const filteredItems = getFilteredItems({ ignoreStatusFilter: true });
+    let filteredItems = getFilteredItems({ ignoreStatusFilter: true });
 
     if (AppState.subjects.length === 0) {
         container.innerHTML = `
@@ -51,6 +54,39 @@ export function renderKanbanView(container) {
         return;
     }
 
+    // Render Course Filter Strip above columns
+    const filterBar = document.createElement('div');
+    filterBar.className = 'kanban-course-filter-bar';
+    filterBar.innerHTML = `
+        <span class="kanban-filter-label"><span class="meta-icon">${ICONS.viewCards}</span> Courses:</span>
+        <div class="kanban-course-pills">
+            <button type="button" class="kanban-course-pill ${activeKanbanCourseFilter === 'all' ? 'active' : ''}" data-subject="all">
+                All Courses (${filteredItems.length})
+            </button>
+            ${AppState.subjects.map(s => {
+                const count = filteredItems.filter(i => i.subjectId === s.id).length;
+                if (count === 0) return '';
+                return `<button type="button" class="kanban-course-pill ${activeKanbanCourseFilter === s.id ? 'active' : ''}" data-subject="${s.id}">
+                    ${escapeHtml(s.title)} (${count})
+                </button>`;
+            }).join('')}
+        </div>
+    `;
+
+    filterBar.querySelectorAll('.kanban-course-pill').forEach(btn => {
+        btn.addEventListener('click', () => {
+            activeKanbanCourseFilter = btn.dataset.subject || 'all';
+            renderKanbanView(container);
+        });
+    });
+
+    container.appendChild(filterBar);
+
+    // Apply course filter if selected
+    if (activeKanbanCourseFilter !== 'all') {
+        filteredItems = filteredItems.filter(i => i.subjectId === activeKanbanCourseFilter);
+    }
+
     // 3 True Workflow Columns (Urgency is rendered as card badges/highlights, not a trap column)
     const columns = [
         {
@@ -64,7 +100,7 @@ export function renderKanbanView(container) {
             id: 'in_progress',
             title: 'In Progress',
             icon: ICONS.clock,
-            color: 'var(--palette-chestnut)',
+            color: 'var(--color-warning)',
             items: []
         },
         {
@@ -202,8 +238,13 @@ export function renderKanbanView(container) {
 
                 card.innerHTML = `
                     <div class="kanban-card-top">
-                        <div class="kanban-card-subject-tag" style="background: ${gradient.css};" title="${escapeHtml(subj.title)}">
-                            ${escapeHtml(subj.title)}
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <div class="compact-checkbox ${item.completed ? 'checked' : ''}" title="${item.completed ? 'Reopen task' : 'Mark as done'}">
+                                ${item.completed ? ICONS.check : ''}
+                            </div>
+                            <div class="kanban-card-subject-tag" style="background: ${gradient.css}; color: ${gradient.contrastText || 'var(--color-on-primary)'};" title="${escapeHtml(subj.title)}">
+                                ${escapeHtml(subj.title)}
+                            </div>
                         </div>
                         <div class="kanban-card-actions">
                             <button type="button" class="compact-action-btn btn-kb-edit" title="Edit Item">
@@ -229,6 +270,19 @@ export function renderKanbanView(container) {
                         </span>
                     </div>
                 `;
+
+                // 1-Click completion toggle without dragging
+                card.querySelector('.compact-checkbox').addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    const toggled = await toggleItemComplete(item.id, true /* isSilent */);
+                    renderKanbanView(container);
+                    if (toggled) {
+                        showToast({
+                            message: toggled.completed ? `"${toggled.title}" marked as completed` : `"${toggled.title}" reopened in To Do`,
+                            type: toggled.completed ? 'success' : 'info'
+                        });
+                    }
+                });
 
                 // Interactive Markdown checklist binding
                 const notesContainer = card.querySelector('.kanban-card-notes');
@@ -262,6 +316,53 @@ export function renderKanbanView(container) {
 
                 cardsList.appendChild(card);
             });
+        }
+
+        // Inline Quick Add at bottom of "To Do" column
+        if (col.id === 'todo') {
+            const quickAdd = document.createElement('div');
+            quickAdd.className = 'kanban-inline-quick-add';
+            quickAdd.innerHTML = `
+                <span class="quick-add-plus-icon">${ICONS.plus}</span>
+                <input type="text" class="kanban-quick-add-input" placeholder="Quick add to To Do... (Enter)" title="Type task title and press Enter">
+            `;
+            const input = quickAdd.querySelector('.kanban-quick-add-input');
+            input.addEventListener('keydown', async (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const val = input.value.trim();
+                    if (!val) return;
+
+                    const parsed = parseQuickTaskInput(val);
+                    if (!parsed) return;
+
+                    const targetSubjId = activeKanbanCourseFilter !== 'all' ? activeKanbanCourseFilter : (AppState.subjects[0]?.id || null);
+                    if (!targetSubjId) {
+                        showToast({ message: 'Please create a course subject first', type: 'warning' });
+                        return;
+                    }
+
+                    const types = parsed.kind === 'task' ? AppState.config.taskTypes : AppState.config.eventTypes;
+                    const defaultType = types[0] || { id: 'tt_hw', name: 'HW', icon: '📚' };
+
+                    const newItem = {
+                        kind: parsed.kind,
+                        typeId: defaultType.id,
+                        typeName: defaultType.name,
+                        typeIcon: defaultType.icon,
+                        subjectId: targetSubjId,
+                        title: parsed.title,
+                        dueDate: parsed.dueDate,
+                        extraInfo: { number: '', location: '', notes: '' }
+                    };
+
+                    await addOrUpdateItem(newItem);
+                    input.value = '';
+                    renderKanbanView(container);
+                    showToast({ message: `Added "${parsed.title}" to To Do`, type: 'success' });
+                }
+            });
+            cardsList.appendChild(quickAdd);
         }
 
         colEl.appendChild(cardsList);

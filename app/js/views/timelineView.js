@@ -247,7 +247,7 @@ function createTimelineNode(item, isPast, container) {
         <div class="timeline-node-dot"></div>
         <div class="timeline-node-card">
             <div class="timeline-card-header">
-                <span class="timeline-subject-tag" style="background: ${gradient.css};">
+                <span class="timeline-subject-tag" style="background: ${gradient.css}; color: ${gradient.contrastText || 'var(--color-on-primary)'};">
                     ${escapeHtml(subj.title)}
                 </span>
                 <span class="compact-urgency-badge ${urgencyClass}">
@@ -299,7 +299,6 @@ function createTimelineNode(item, isPast, container) {
     node.querySelector('.compact-checkbox').addEventListener('click', async (e) => {
         e.stopPropagation();
         await toggleItemComplete(item.id, true /* silent */);
-        item.completed = !item.completed;
         const checkboxEl = node.querySelector('.compact-checkbox');
         const titleEl = node.querySelector('.timeline-item-title');
         const badgeEl = node.querySelector('.compact-urgency-badge');
