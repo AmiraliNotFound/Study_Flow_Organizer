@@ -233,7 +233,6 @@ function createSubjectCard(subj, container, hasSearch) {
         </div>
 
         <div class="subject-title">${escapeHtml(subj.title)}</div>
-        <div class="subject-code-desc">${escapeHtml(subj.code || 'No course code specified')}</div>
 
         ${tagsHtml ? `<div class="subject-card-tags-strip">${tagsHtml}</div>` : ''}
 

@@ -89,12 +89,12 @@ function renderPaletteItems(query = '') {
 
     // Match courses
     const matchedSubjects = (AppState.subjects || [])
-        .filter(s => !q || s.title.toLowerCase().includes(q) || (s.code && s.code.toLowerCase().includes(q)))
+        .filter(s => !q || s.title.toLowerCase().includes(q))
         .map(s => ({
             id: `subj_${s.id}`,
             group: 'Courses',
             title: s.title,
-            subtitle: s.code || 'Course Subject',
+            subtitle: 'Course Subject',
             icon: ICONS.viewCards,
             action: () => openSubjectModal(s.id)
         }));

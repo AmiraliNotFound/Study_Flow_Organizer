@@ -118,11 +118,6 @@ export const SUBJECT_MODAL_HTML = `<div id="subjectModal" class="modal-overlay">
                         <input type="text" id="subjectNameInput" class="form-input" placeholder="e.g. Fluid Mechanics or Computer Science" required>
                     </div>
 
-                    <div class="form-group">
-                        <label class="form-label" for="subjectCodeInput">Course Code / Units / Instructor:</label>
-                        <input type="text" id="subjectCodeInput" class="form-input" placeholder="e.g. CS-101 • 3 Units • Hall 204">
-                    </div>
-
                     <!-- Course Tags Section (Req 2) -->
                     <div class="form-group">
                         <label class="form-label">Course Tags:</label>

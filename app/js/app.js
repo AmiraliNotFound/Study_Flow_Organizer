@@ -380,6 +380,20 @@ function initAppEvents() {
         }
     });
 
+    // Dynamic Window Maximization State Check for Secondary Control Ribbon
+    function updateWindowMaximizedState() {
+        const screenAvailW = window.screen?.availWidth || window.innerWidth;
+        const screenAvailH = window.screen?.availHeight || window.innerHeight;
+        const isMaximized = (
+            (window.innerWidth >= screenAvailW - 32 && window.innerHeight >= screenAvailH - 48) ||
+            window.outerWidth >= screenAvailW - 32 ||
+            window.innerWidth >= 1360
+        );
+        document.documentElement.classList.toggle('is-window-maximized', isMaximized);
+    }
+    window.addEventListener('resize', updateWindowMaximizedState);
+    updateWindowMaximizedState();
+
     // Click outside modal to close
     window.addEventListener('click', (e) => {
         if (e.target.classList.contains('modal-overlay')) {

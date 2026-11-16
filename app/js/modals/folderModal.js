@@ -37,8 +37,7 @@ export function openFolderModal(materialId = null, preselectedSubjectId = null) 
 
     const subjectOptions = AppState.subjects.map(s => ({
         value: s.id,
-        label: s.title,
-        secondary: s.code || ''
+        label: s.title
     }));
 
     if (folderSubjectSelect) {

@@ -40,8 +40,7 @@ export function openItemModal(itemId = null, preselectedSubjectId = null, defaul
     // Populate Subjects Custom Dropdown
     const subjectOptions = AppState.subjects.map(s => ({
         value: s.id,
-        label: s.title,
-        secondary: s.code || ''
+        label: s.title
     }));
 
     if (subjectSelect) {
