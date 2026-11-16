@@ -132,6 +132,12 @@ function createSubjectCard(subj, container, hasSearch) {
     const progressPercent = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
 
     const currentTab = AppState.cardSubTabs[subj.id] || 'schedule';
+    const query = (AppState.searchQuery || '').trim().toLowerCase();
+    const hasMatchingFolders = hasSearch && subjMaterials.some(m =>
+        (m.name && m.name.toLowerCase().includes(query)) ||
+        (m.notes && m.notes.toLowerCase().includes(query))
+    );
+    const activeSubTab = hasMatchingFolders ? 'folders' : currentTab;
 
     const card = document.createElement('div');
     card.className = `subject-card view-flow-in ${subj.isPinned ? 'is-pinned-card' : ''}`;
@@ -277,11 +283,11 @@ function createSubjectCard(subj, container, hasSearch) {
     const subTabs = document.createElement('div');
     subTabs.className = 'card-sub-tabs';
     subTabs.innerHTML = `
-        <button type="button" class="card-sub-tab-btn ${currentTab === 'schedule' ? 'active' : ''}" data-tab="schedule">
+        <button type="button" class="card-sub-tab-btn ${activeSubTab === 'schedule' ? 'active' : ''}" data-tab="schedule">
             ${ICONS.schedule}
             <span>Schedule (<span class="schedule-tab-count">${subjItems.length}</span>)</span>
         </button>
-        <button type="button" class="card-sub-tab-btn ${currentTab === 'folders' ? 'active' : ''}" data-tab="folders">
+        <button type="button" class="card-sub-tab-btn ${activeSubTab === 'folders' ? 'active' : ''}" data-tab="folders">
             ${ICONS.folder}
             <span>Folders (<span class="folders-tab-count">${subjMaterials.length}</span>)</span>
         </button>
@@ -290,11 +296,11 @@ function createSubjectCard(subj, container, hasSearch) {
     // --- Tab Contents ---
     const scheduleContent = document.createElement('div');
     scheduleContent.className = 'compact-grid-list card-schedule-pane';
-    scheduleContent.style.display = currentTab === 'schedule' ? 'flex' : 'none';
+    scheduleContent.style.display = activeSubTab === 'schedule' ? 'flex' : 'none';
 
     const foldersContent = document.createElement('div');
     foldersContent.className = 'compact-grid-list card-folders-pane';
-    foldersContent.style.display = currentTab === 'folders' ? 'flex' : 'none';
+    foldersContent.style.display = activeSubTab === 'folders' ? 'flex' : 'none';
 
     // Local Sub-Tab switching WITHOUT page reload (Req 3)
     subTabs.querySelectorAll('.card-sub-tab-btn').forEach(btn => {
@@ -613,16 +619,20 @@ function renderCardFolders(card, subj, foldersContent) {
         const folderEl = document.createElement('div');
         folderEl.className = 'folder-item-card';
         folderEl.innerHTML = `
-            <div style="flex: 1; min-width: 0;">
+            <div class="folder-main-info" style="flex: 1; min-width: 0; cursor: pointer;" title="Click to open in Windows Explorer">
                 <div class="folder-name-tag">
                     <span class="folder-svg-icon">${ICONS.folder}</span>
                     <span title="${escapeHtml(mat.name)}">${escapeHtml(mat.name)}</span>
                 </div>
                 <div class="folder-path-sub" title="${escapeHtml(mat.filePath)}">${escapeHtml(mat.filePath)}</div>
+                ${mat.notes ? `<div class="folder-notes-sub" title="${escapeHtml(mat.notes)}">${escapeHtml(mat.notes)}</div>` : ''}
             </div>
-            <div style="display: flex; gap: 4px;">
+            <div style="display: flex; gap: 4px; align-items: center;">
                 <button type="button" class="btn btn-sm btn-outline-cyan btn-open-folder" title="Open in Windows Explorer">
                     Open
+                </button>
+                <button type="button" class="compact-action-btn btn-copy-folder" title="Copy Folder Path">
+                    ${ICONS.copy}
                 </button>
                 <button type="button" class="compact-action-btn btn-edit-folder" title="Edit Folder">
                     ${ICONS.edit}
@@ -633,11 +643,28 @@ function renderCardFolders(card, subj, foldersContent) {
             </div>
         `;
 
-        folderEl.querySelector('.btn-open-folder').addEventListener('click', async (e) => {
-            e.stopPropagation();
+        const triggerOpen = async () => {
             const res = await openFolder(mat.filePath);
             if (!res.success) {
                 showToast({ message: res.error || 'Could not open folder in Explorer.', type: 'error' });
+            } else {
+                showToast({ message: `Opened "${mat.name}" in Explorer`, type: 'info' });
+            }
+        };
+
+        folderEl.querySelector('.folder-main-info').addEventListener('click', triggerOpen);
+        folderEl.querySelector('.btn-open-folder').addEventListener('click', (e) => {
+            e.stopPropagation();
+            triggerOpen();
+        });
+
+        folderEl.querySelector('.btn-copy-folder').addEventListener('click', async (e) => {
+            e.stopPropagation();
+            try {
+                await navigator.clipboard.writeText(mat.filePath);
+                showToast({ message: 'Folder path copied to clipboard', type: 'success' });
+            } catch (err) {
+                showToast({ message: 'Could not copy path to clipboard', type: 'error' });
             }
         });
 
@@ -658,6 +685,9 @@ function renderCardFolders(card, subj, foldersContent) {
                     const remaining = AppState.materials.filter(m => m.subjectId === subj.id);
                     const countEl = card.querySelector('.folders-tab-count');
                     if (countEl) countEl.textContent = remaining.length;
+                    if (remaining.length === 0) {
+                        renderCardFolders(card, subj, foldersContent);
+                    }
                     showToast({ message: 'Folder link removed', type: 'info' });
                 }
             });

@@ -546,12 +546,19 @@ export async function deleteMaterial(materialId) {
     return mat;
 }
 
-export function doesSubjectMatchQuery(subj, query) {
+export function doesSubjectMatchQuery(subj, query, includeMaterials = true) {
     if (!subj) return false;
     if (!query || !query.trim()) return true;
     const tokens = query.toLowerCase().trim().split(/\s+/).filter(Boolean);
     const tagsStr = Array.isArray(subj.tags) ? subj.tags.join(' ') : '';
-    const corpus = `${subj.title || ''} ${subj.code || ''} ${subj.instructor || ''} ${tagsStr}`.toLowerCase();
+    let materialsStr = '';
+    if (includeMaterials && Array.isArray(AppState.materials)) {
+        materialsStr = AppState.materials
+            .filter(m => m.subjectId === subj.id)
+            .map(m => `${m.name || ''} ${m.notes || ''} ${m.filePath || ''}`)
+            .join(' ');
+    }
+    const corpus = `${subj.title || ''} ${subj.code || ''} ${subj.instructor || ''} ${tagsStr} ${materialsStr}`.toLowerCase();
     return tokens.every(token => corpus.includes(token));
 }
 

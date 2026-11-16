@@ -20,6 +20,8 @@ import { openTrashModal } from '../modals/trashModal.js';
 import { openAiModal } from '../modals/aiModal.js';
 import { applyPalette, getActivePaletteId } from '../theme.js';
 import { formatDate, escapeHtml } from '../dateUtils.js';
+import { openFolder } from '../api.js';
+import { showToast } from '../toast.js';
 
 let selectedIndex = 0;
 let currentItems = [];
@@ -114,7 +116,30 @@ function renderPaletteItems(query = '') {
             };
         });
 
-    currentItems = [...matchedCommands, ...matchedSubjects, ...matchedTasks];
+    // Match linked course folders
+    const matchedFolders = (AppState.materials || [])
+        .filter(m => !q || m.name.toLowerCase().includes(q) || (m.filePath && m.filePath.toLowerCase().includes(q)) || (m.notes && m.notes.toLowerCase().includes(q)))
+        .slice(0, 6)
+        .map(m => {
+            const subj = AppState.subjects.find(s => s.id === m.subjectId);
+            return {
+                id: `folder_${m.id}`,
+                group: 'Folders',
+                title: m.name,
+                subtitle: `${subj?.title || 'Course'} • ${m.filePath}`,
+                icon: ICONS.folder,
+                action: async () => {
+                    const res = await openFolder(m.filePath);
+                    if (!res.success) {
+                        showToast({ message: res.error || 'Could not open folder in Explorer.', type: 'error' });
+                    } else {
+                        showToast({ message: `Opened "${m.name}" in Explorer`, type: 'info' });
+                    }
+                }
+            };
+        });
+
+    currentItems = [...matchedCommands, ...matchedSubjects, ...matchedFolders, ...matchedTasks];
 
     if (currentItems.length === 0) {
         resultsContainer.innerHTML = `

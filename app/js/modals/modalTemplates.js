@@ -160,7 +160,7 @@ export const FOLDER_MODAL_HTML = `<div id="folderModal" class="modal-overlay">
                         <input type="hidden" id="folderSubjectSelect" required>
                     </div>
 
-                    <div class="material-drop-box">
+                    <div class="material-drop-box" id="folderDropZone">
                         <label class="form-label">Folder Location:</label>
                         <div class="material-picker-row">
                             <button type="button" class="btn btn-primary btn-sm" id="btnBrowseFolder">
@@ -169,14 +169,28 @@ export const FOLDER_MODAL_HTML = `<div id="folderModal" class="modal-overlay">
                             <button type="button" class="btn btn-secondary btn-sm" id="btnPasteFolderPath">
                                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 4px;"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg> Paste Path
                             </button>
+                            <button type="button" class="btn btn-secondary btn-sm" id="btnTestOpenFolder" title="Open this folder in Windows Explorer right now">
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 4px;"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg> Test Open
+                            </button>
+                        </div>
+                        <div class="folder-drop-hint">
+                            <span>Drop any folder or file here from Windows Explorer</span>
                         </div>
                         <div class="form-group" style="margin-top: 6px;">
                             <label class="form-label" style="font-size: 0.74rem;">Folder Label:</label>
                             <input type="text" id="folderNameInput" class="form-input" placeholder="e.g. Lectures & Slides, Lab Manuals..." required>
+                            <div class="folder-preset-chips" id="folderPresetChips">
+                                <span class="folder-chip-label">Presets:</span>
+                                <button type="button" class="folder-preset-chip" data-label="Lectures & Slides">Lectures & Slides</button>
+                                <button type="button" class="folder-preset-chip" data-label="Assignments & Labs">Assignments & Labs</button>
+                                <button type="button" class="folder-preset-chip" data-label="Past Exams & Solutions">Past Exams</button>
+                                <button type="button" class="folder-preset-chip" data-label="Project Files">Project Files</button>
+                            </div>
                         </div>
                         <div class="form-group">
                             <label class="form-label" style="font-size: 0.74rem;">Folder Path on Disk:</label>
                             <input type="text" id="folderPathInput" class="form-input" placeholder="e.g. D:\\University\\Course\\Materials" required>
+                            <div id="folderPathStatus" class="folder-path-status" style="display: none;"></div>
                         </div>
                     </div>
 

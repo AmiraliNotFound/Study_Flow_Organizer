@@ -287,6 +287,34 @@ async function handleRequest(req, res) {
         }
     }
 
+// Path Sanitization & Resolver Helper
+function sanitizeAndResolvePath(rawPath) {
+    if (!rawPath || typeof rawPath !== 'string') return '';
+    let p = rawPath.trim().replace(/^["']|["']$/g, '').trim();
+
+    // Handle file:// URIs
+    if (/^file:\/\//i.test(p)) {
+        p = p.replace(/^file:\/\/\/?/i, '');
+        try {
+            p = decodeURIComponent(p);
+        } catch (e) {}
+    }
+
+    // Expand ~ to user homedir
+    if (p === '~' || p.startsWith('~\\') || p.startsWith('~/')) {
+        p = path.join(os.homedir(), p.slice(1));
+    }
+
+    // Expand Windows environment variables (e.g. %USERPROFILE%, %APPDATA%, %LOCALAPPDATA%)
+    if (process.platform === 'win32' && /%[a-zA-Z0-9_]+%/.test(p)) {
+        p = p.replace(/%([a-zA-Z0-9_]+)%/g, (_, envVar) => {
+            return process.env[envVar] || `%${envVar}%`;
+        });
+    }
+
+    return path.normalize(p);
+}
+
     // 4. POST /api/open-folder: Safe OS Explorer folder launcher
     if (pathname === '/api/open-folder' && req.method === 'POST') {
         try {
@@ -295,20 +323,26 @@ async function handleRequest(req, res) {
                 return sendJson(res, 400, { success: false, error: 'Path parameter is required' });
             }
 
-            const cleanPath = path.normalize(folderPath.trim().replace(/^"|"$/g, ''));
-            if (!fs.existsSync(cleanPath)) {
-                return sendJson(res, 404, { success: false, error: `Path does not exist on disk: ${cleanPath}` });
+            const cleanPath = sanitizeAndResolvePath(folderPath);
+            if (!cleanPath || !fs.existsSync(cleanPath)) {
+                return sendJson(res, 404, { success: false, error: `Path does not exist on disk: ${cleanPath || folderPath}` });
             }
 
+            const isDir = fs.statSync(cleanPath).isDirectory();
+
             if (process.platform === 'win32') {
-                spawn('explorer.exe', [cleanPath], { detached: true, stdio: 'ignore' }).unref();
+                if (isDir) {
+                    spawn('explorer.exe', [cleanPath], { detached: true, stdio: 'ignore' }).unref();
+                } else {
+                    spawn('explorer.exe', [`/select,${cleanPath}`], { detached: true, stdio: 'ignore' }).unref();
+                }
             } else if (process.platform === 'darwin') {
                 spawn('open', [cleanPath], { detached: true, stdio: 'ignore' }).unref();
             } else {
                 spawn('xdg-open', [cleanPath], { detached: true, stdio: 'ignore' }).unref();
             }
 
-            return sendJson(res, 200, { success: true, message: 'Opened in Explorer', path: cleanPath });
+            return sendJson(res, 200, { success: true, message: 'Opened in Explorer', path: cleanPath, isDirectory: isDir });
         } catch (err) {
             return sendJson(res, 500, { success: false, error: err.message });
         }
@@ -337,20 +371,45 @@ async function handleRequest(req, res) {
                 return sendJson(res, 501, { success: false, error: 'Native folder dialog currently supported on Windows' });
             }
 
+            let initialPath = '';
+            try {
+                const body = await parseJsonBody(req);
+                if (body && body.initialPath) {
+                    initialPath = sanitizeAndResolvePath(body.initialPath);
+                }
+            } catch (e) {}
+
             const psScript = `
 Add-Type -AssemblyName System.Windows.Forms
 $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
 $dialog.Description = "Select Course Material Folder"
 $dialog.ShowNewFolderButton = $true
+$init = "${initialPath.replace(/"/g, '`"')}"
+if ($init -and (Test-Path $init)) {
+    $dialog.SelectedPath = $init
+}
 $topForm = New-Object System.Windows.Forms.Form
 $topForm.TopMost = $true
 $topForm.StartPosition = [System.Windows.Forms.FormStartPosition]::CenterScreen
-if ($dialog.ShowDialog($topForm) -eq [System.Windows.Forms.DialogResult]::OK) {
+$topForm.Show()
+$topForm.Focus()
+$topForm.BringToFront()
+$res = $dialog.ShowDialog($topForm)
+if ($res -eq [System.Windows.Forms.DialogResult]::OK) {
+    [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
     Write-Output $dialog.SelectedPath
 }
+$dialog.Dispose()
+$topForm.Close()
+$topForm.Dispose()
 `;
-            const result = await runCmd('powershell.exe', ['-NoProfile', '-Command', psScript]);
+            const b64 = Buffer.from(psScript, 'utf16le').toString('base64');
+            const result = await runCmd('powershell.exe', ['-NoProfile', '-STA', '-EncodedCommand', b64]);
             const selectedPath = result.stdout.trim();
+
+            if (!result.success && result.stderr) {
+                return sendJson(res, 500, { success: false, error: result.stderr });
+            }
 
             if (!selectedPath) {
                 return sendJson(res, 200, { success: false, cancelled: true });
@@ -361,6 +420,73 @@ if ($dialog.ShowDialog($topForm) -eq [System.Windows.Forms.DialogResult]::OK) {
                 success: true,
                 path: selectedPath,
                 name: folderName
+            });
+        } catch (err) {
+            return sendJson(res, 500, { success: false, error: err.message });
+        }
+    }
+
+    // 6b. POST /api/folder-info: Validates a folder path and returns metadata (exists, isDirectory, fileCount)
+    if (pathname === '/api/folder-info' && req.method === 'POST') {
+        try {
+            const { folderPath } = await parseJsonBody(req);
+            if (!folderPath || typeof folderPath !== 'string') {
+                return sendJson(res, 400, { success: false, error: 'Path parameter is required' });
+            }
+
+            const cleanPath = sanitizeAndResolvePath(folderPath);
+            const exists = Boolean(cleanPath && fs.existsSync(cleanPath));
+
+            let isDirectory = false;
+            let fileCount = 0;
+            let lastModified = null;
+
+            if (exists) {
+                try {
+                    const stat = fs.statSync(cleanPath);
+                    isDirectory = stat.isDirectory();
+                    lastModified = stat.mtime.toISOString();
+                    if (isDirectory) {
+                        const entries = fs.readdirSync(cleanPath);
+                        fileCount = entries.length;
+                    }
+                } catch (e) {}
+            }
+
+            return sendJson(res, 200, {
+                success: true,
+                exists,
+                path: cleanPath,
+                isDirectory,
+                fileCount,
+                lastModified
+            });
+        } catch (err) {
+            return sendJson(res, 500, { success: false, error: err.message });
+        }
+    }
+
+    // 6c. POST /api/create-folder: Creates a directory on disk if requested
+    if (pathname === '/api/create-folder' && req.method === 'POST') {
+        try {
+            const { folderPath } = await parseJsonBody(req);
+            if (!folderPath || typeof folderPath !== 'string') {
+                return sendJson(res, 400, { success: false, error: 'Path parameter is required' });
+            }
+
+            const cleanPath = sanitizeAndResolvePath(folderPath);
+            if (!cleanPath) {
+                return sendJson(res, 400, { success: false, error: 'Invalid folder path' });
+            }
+
+            if (!fs.existsSync(cleanPath)) {
+                fs.mkdirSync(cleanPath, { recursive: true });
+            }
+
+            return sendJson(res, 200, {
+                success: true,
+                path: cleanPath,
+                message: 'Folder created successfully'
             });
         } catch (err) {
             return sendJson(res, 500, { success: false, error: err.message });

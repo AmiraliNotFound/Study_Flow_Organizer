@@ -281,6 +281,97 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
+    transition: all 0.2s ease;
+}
+
+.material-drop-box.drag-active {
+    border-color: var(--color-primary);
+    background: rgba(56, 189, 248, 0.08);
+    box-shadow: 0 0 16px rgba(56, 189, 248, 0.2);
+}
+
+.folder-drop-hint {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    text-align: center;
+    padding: 4px;
+    border: 1px dashed var(--card-border-subtle);
+    border-radius: 6px;
+}
+
+.folder-preset-chips {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 6px;
+}
+
+.folder-chip-label {
+    font-size: 0.68rem;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.folder-preset-chip {
+    background: var(--card-surface);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 2px 8px;
+    font-size: 0.68rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.folder-preset-chip:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+    background: var(--card-surface-hover);
+}
+
+.folder-path-status {
+    font-size: 0.72rem;
+    margin-top: 6px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.folder-path-status.status-valid {
+    background: rgba(34, 197, 94, 0.1);
+    color: #22c55e;
+    border: 1px solid rgba(34, 197, 94, 0.25);
+}
+
+.folder-path-status.status-missing {
+    background: rgba(245, 158, 11, 0.1);
+    color: #f59e0b;
+    border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+.folder-path-status.status-checking {
+    background: var(--card-surface);
+    color: var(--text-muted);
+    border: 1px solid var(--card-border-subtle);
+}
+
+.btn-create-missing-folder {
+    background: transparent;
+    border: 1px solid currentColor;
+    border-radius: 4px;
+    font-size: 0.66rem;
+    padding: 2px 6px;
+    color: inherit;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.btn-create-missing-folder:hover {
+    background: rgba(245, 158, 11, 0.15);
 }
 
 .material-picker-row {
