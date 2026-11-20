@@ -188,7 +188,7 @@ export function normalizeData(raw) {
     return {
         $schema: "StudyFlowOrganizer_v4",
         metadata: {
-            version: "4.2.0",
+            version: "4.4.0",
             appName: "Study Flow Organizer",
             lastSaved: raw.metadata?.lastSaved || new Date().toISOString(),
             language: "en"

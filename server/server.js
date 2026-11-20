@@ -1,5 +1,5 @@
 /**
- * Study Flow Organizer - Local API & Static Server (v4.2)
+ * Study Flow Organizer - Local API & Static Server (v4.4)
  * 
  * Provides:
  * 1. Zero-dependency static file server for app/
@@ -177,7 +177,7 @@ function loadDatabase() {
     return {
         $schema: "StudyFlowOrganizer_v4",
         metadata: {
-            version: "4.2.0",
+            version: "4.4.0",
             appName: "Study Flow Organizer",
             lastSaved: new Date().toISOString(),
             language: "en"
@@ -581,7 +581,7 @@ async function handleRequest(req, res) {
     if (pathname === '/api/health' && req.method === 'GET') {
         return sendJson(res, 200, {
             status: 'ok',
-            version: '4.1.0',
+            version: '4.4.0',
             serverTime: new Date().toISOString(),
             platform: process.platform,
             dataDirectory: DATA_DIR,
@@ -620,7 +620,7 @@ async function handleRequest(req, res) {
 
             if (!payload.metadata) payload.metadata = {};
             payload.metadata.lastSaved = new Date().toISOString();
-            payload.metadata.version = "4.1.0";
+            payload.metadata.version = "4.4.0";
             payload.$schema = "StudyFlowOrganizer_v4";
 
             const tempFile = `${DATA_FILE}.tmp`;
@@ -992,7 +992,7 @@ if (process.env.NODE_ENV !== 'test') {
 
     server.listen(PORT, '127.0.0.1', () => {
         console.log(`==================================================================`);
-        console.log(`  🎓 Study Flow Organizer v4.1`);
+        console.log(`  🎓 Study Flow Organizer v4.4`);
         console.log(`  🟢 Server running at: http://127.0.0.1:${PORT}`);
         console.log(`  📂 Standard AppData : ${DATA_DIR}`);
         console.log(`==================================================================`);
