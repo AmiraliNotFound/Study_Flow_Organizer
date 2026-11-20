@@ -2279,3 +2279,68 @@
     opacity: 1;
     transform: translateY(0);
 }
+
+/* ==========================================================================
+   TAG MANAGER MODAL ENHANCEMENTS
+   ========================================================================== */
+.modal-tags-collection {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 220px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.modal-tag-chip-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: var(--card-surface-sunken);
+    border: 1px solid var(--card-border-subtle);
+    border-radius: var(--radius-sm);
+    transition: var(--transition-smooth);
+}
+
+.modal-tag-chip-row:hover {
+    border-color: var(--card-border);
+    background: var(--card-surface-hover);
+}
+
+.modal-tag-chip-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.chip-tag-name {
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: var(--text-primary);
+}
+
+.chip-course-count {
+    font-size: 0.74rem;
+    color: var(--text-muted);
+}
+
+.btn-delete-tag {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: var(--transition-smooth);
+}
+
+.btn-delete-tag:hover {
+    color: var(--color-urgent);
+    background: var(--color-urgent-subtle);
+    transform: scale(1.08);
+}

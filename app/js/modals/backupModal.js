@@ -7,6 +7,18 @@ import { SETTINGS_MODAL_HTML } from './modalTemplates.js';
 import { AppState, setAppStateData, persistCurrentState } from '../state.js';
 import { isServerConnected } from '../api.js';
 import { getAiConfig, saveAiConfig, fetchAiModels, PRELOADED_GEMINI_MODELS, DEFAULT_GEMINI_FALLBACKS } from '../services/aiService.js';
+import { 
+    isGoogleSignedIn, 
+    signInGoogle, 
+    signOutGoogle, 
+    getSavedClientId, 
+    saveClientId, 
+    getSavedUser, 
+    getLastSyncTime, 
+    executeSync,
+    initGisClient,
+    subscribeSync
+} from '../services/googleDriveSync.js';
 import { CustomSelect } from '../components/customSelect.js';
 import { applyPalette, getActivePaletteId, getSavedCustomColors, applyThemeStyle, getActiveThemeStyle } from '../theme.js';
 import { openTrashModal } from './trashModal.js';
@@ -69,8 +81,14 @@ export function updateLandingBadges() {
     const storageBadge = document.getElementById('landingStorageBadge');
     if (storageBadge) {
         const isConnected = isServerConnected();
-        storageBadge.className = 'landing-card-badge ' + (isConnected ? 'status-configured' : 'status-unconfigured');
-        storageBadge.textContent = isConnected ? 'AppData Disk Active' : 'Offline LocalStorage';
+        const isDriveActive = isGoogleSignedIn();
+        if (isDriveActive) {
+            storageBadge.className = 'landing-card-badge status-configured';
+            storageBadge.textContent = isConnected ? 'AppData + Drive' : 'Google Drive Active';
+        } else {
+            storageBadge.className = 'landing-card-badge ' + (isConnected ? 'status-configured' : 'status-unconfigured');
+            storageBadge.textContent = isConnected ? 'AppData Disk Active' : 'Offline LocalStorage';
+        }
     }
 
     // 4. Shortcuts badge
@@ -202,6 +220,44 @@ export function switchSettingsTab(tabName, animate = true) {
     }
 }
 
+export function updateGdriveSettingsUI() {
+    const statusDot = document.getElementById('gdriveStatusDot');
+    const statusText = document.getElementById('gdriveStatusText');
+    const emailText = document.getElementById('gdriveUserEmailText');
+    const clientIdInput = document.getElementById('gdriveClientIdInput');
+    const btnSignIn = document.getElementById('btnGdriveSignIn');
+    const btnSyncNow = document.getElementById('btnGdriveSyncNow');
+    const btnSignOut = document.getElementById('btnGdriveSignOut');
+
+    if (clientIdInput) {
+        clientIdInput.value = getSavedClientId();
+    }
+
+    const signedIn = isGoogleSignedIn();
+    const user = getSavedUser();
+    const lastSync = getLastSyncTime();
+
+    if (signedIn) {
+        if (statusDot) statusDot.style.background = 'var(--color-success)';
+        if (statusText) statusText.textContent = 'Connected & Active';
+        if (emailText) {
+            emailText.style.display = 'block';
+            let syncNotice = lastSync ? ` • Last synced: ${new Date(lastSync).toLocaleTimeString()}` : '';
+            emailText.textContent = `Signed in as: ${user || 'Google Account'}${syncNotice}`;
+        }
+        btnSignIn?.classList.add('hidden');
+        btnSyncNow?.classList.remove('hidden');
+        btnSignOut?.classList.remove('hidden');
+    } else {
+        if (statusDot) statusDot.style.background = 'var(--text-muted)';
+        if (statusText) statusText.textContent = 'Not Connected';
+        if (emailText) emailText.style.display = 'none';
+        btnSignIn?.classList.remove('hidden');
+        btnSyncNow?.classList.add('hidden');
+        btnSignOut?.classList.add('hidden');
+    }
+}
+
 export async function openBackupModal(initialTab = null) {
     mountModalHtml('settingsModal', SETTINGS_MODAL_HTML);
     const modal = document.getElementById('settingsModal') || document.getElementById('backupModal');
@@ -249,6 +305,7 @@ export async function openBackupModal(initialTab = null) {
     // Populate AI Assistant Settings
     populateAiSettingsForm();
     updateSettingsPaletteUI();
+    updateGdriveSettingsUI();
     updateLandingBadges();
 
     // Smooth opening animation without instant jump
@@ -522,14 +579,58 @@ export function initBackupModalEvents() {
             }
         });
         return;
-        if (false) {
-            AppState.subjects = [];
-            AppState.items = [];
-            AppState.materials = [];
-            await persistCurrentState();
-            showToast({ message: 'Workspace cleared', type: 'info' });
-            closeBackupModal();
+    });
+
+    // --- Google Drive Cloud Sync Event Listeners ---
+    subscribeSync(() => {
+        updateGdriveSettingsUI();
+        updateLandingBadges();
+    });
+
+    document.getElementById('btnSaveGdriveClientId')?.addEventListener('click', () => {
+        const val = document.getElementById('gdriveClientIdInput')?.value || '';
+        saveClientId(val);
+        initGisClient(val);
+        showToast({ message: 'Google OAuth Client ID saved!', type: 'success' });
+        updateGdriveSettingsUI();
+    });
+
+    document.getElementById('btnGdriveSignIn')?.addEventListener('click', () => {
+        try {
+            const cid = document.getElementById('gdriveClientIdInput')?.value || getSavedClientId();
+            if (!cid) {
+                showToast({ message: 'Please enter your Google OAuth Client ID first.', type: 'warning' });
+                return;
+            }
+            saveClientId(cid);
+            signInGoogle(cid);
+        } catch (e) {
+            showToast({ message: e.message, type: 'error' });
         }
+    });
+
+    document.getElementById('btnGdriveSyncNow')?.addEventListener('click', async () => {
+        showToast({ message: 'Syncing with Google Drive...', type: 'info' });
+        const res = await executeSync(AppState.data || {
+            subjects: AppState.subjects,
+            items: AppState.items,
+            materials: AppState.materials,
+            tags: AppState.tags,
+            settings: AppState.settings
+        });
+        if (res.success && res.data) {
+            setAppStateData(res.data);
+            showToast({ message: 'Synced successfully with Google Drive!', type: 'success' });
+        } else {
+            showToast({ message: res.error || 'Sync failed', type: 'error' });
+        }
+        updateGdriveSettingsUI();
+    });
+
+    document.getElementById('btnGdriveSignOut')?.addEventListener('click', () => {
+        signOutGoogle();
+        showToast({ message: 'Disconnected from Google Drive', type: 'info' });
+        updateGdriveSettingsUI();
     });
 
     // Palette selection events (Req 3)

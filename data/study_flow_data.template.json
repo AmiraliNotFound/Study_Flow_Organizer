@@ -32,6 +32,11 @@
         "icon": "📖"
       },
       {
+        "id": "tt_todo",
+        "name": "To-Do",
+        "icon": "📝"
+      },
+      {
         "id": "tt_custom",
         "name": "Custom",
         "icon": "📌"

@@ -374,9 +374,9 @@ async function executeQuickVoicePlan(audioBase64, mimeType) {
                 const newItem = {
                     id: newItemId,
                     kind: isEvent ? 'event' : 'task',
-                    typeId: it.typeId || (isEvent ? 'et_quiz' : 'tt_hw'),
-                    typeName: it.typeName || (isEvent ? 'Quiz' : 'Assignment'),
-                    typeIcon: it.typeIcon || (isEvent ? '📝' : '📚'),
+                    typeId: it.typeId || (isEvent ? 'et_quiz' : (subjId ? 'tt_hw' : 'tt_todo')),
+                    typeName: it.typeName || (isEvent ? 'Quiz' : (subjId ? 'HW' : 'To-Do')),
+                    typeIcon: it.typeIcon || (isEvent ? '📝' : (subjId ? '📚' : '📝')),
                     title: (it.title || 'Untitled Item').trim(),
                     subjectId: subjId,
                     dueDate: it.dueDate || new Date().toISOString(),

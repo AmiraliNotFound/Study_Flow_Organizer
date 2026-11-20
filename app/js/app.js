@@ -24,6 +24,8 @@ import { openAiModal, initAiModalEvents } from './modals/aiModal.js';
 import { initTagModalEvents } from './modals/tagModal.js';
 import { initQuickAiVoiceEvents } from './services/quickAiVoice.js';
 import { initCommandPalette, openCommandPalette } from './components/commandPalette.js';
+import { isGoogleSignedIn, executeSync, subscribeSync, initGisClient } from './services/googleDriveSync.js';
+import { showToast } from './toast.js';
 
 // Renders the currently selected view
 export function renderActiveView() {
@@ -38,6 +40,11 @@ export function renderActiveView() {
     calendarContainer.classList.toggle('hidden', AppState.currentView !== 'calendar');
     timelineContainer.classList.toggle('hidden', AppState.currentView !== 'timeline');
     kanbanContainer.classList.toggle('hidden', AppState.currentView !== 'kanban');
+
+    const tlJumpBtn = document.getElementById('timelineFloatingJumpBtn');
+    if (tlJumpBtn) {
+        tlJumpBtn.style.display = AppState.currentView === 'timeline' ? 'inline-flex' : 'none';
+    }
 
     if (AppState.currentView === 'grid') {
         renderCardsView(gridContainer);
@@ -181,6 +188,11 @@ function switchView(viewName) {
         btn.classList.toggle('active', btn.dataset.view === viewName);
     });
 
+    // Mobile Bottom Navigation Tabs
+    document.querySelectorAll('.mobile-nav-btn[data-view]').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.view === viewName);
+    });
+
     renderActiveView();
 }
 
@@ -287,6 +299,65 @@ function initAppEvents() {
     document.getElementById('btnSettingsHeader')?.addEventListener('click', () => openBackupModal());
     document.getElementById('settingsModalCloseBtn')?.addEventListener('click', closeBackupModal);
     document.getElementById('btnCloseSettings')?.addEventListener('click', closeBackupModal);
+
+    // Google Drive Cloud Sync Header Trigger
+    const btnCloudSync = document.getElementById('btnCloudSync');
+    const syncDot = document.getElementById('syncStatusDot');
+
+    subscribeSync(({ status }) => {
+        if (!syncDot) return;
+        syncDot.classList.remove('hidden', 'syncing', 'error');
+        if (status === 'syncing') {
+            syncDot.classList.add('syncing');
+            btnCloudSync?.classList.add('sync-spinning');
+        } else if (status === 'error') {
+            syncDot.classList.add('error');
+            btnCloudSync?.classList.remove('sync-spinning');
+        } else {
+            btnCloudSync?.classList.remove('sync-spinning');
+            if (isGoogleSignedIn()) {
+                syncDot.classList.remove('hidden');
+            } else {
+                syncDot.classList.add('hidden');
+            }
+        }
+    });
+
+    if (isGoogleSignedIn() && syncDot) {
+        syncDot.classList.remove('hidden');
+    }
+
+    btnCloudSync?.addEventListener('click', async () => {
+        if (!isGoogleSignedIn()) {
+            openBackupModal('storage');
+            return;
+        }
+        showToast({ message: 'Syncing with Google Drive...', type: 'info' });
+        const res = await executeSync(AppState.data || {
+            subjects: AppState.subjects,
+            items: AppState.items,
+            materials: AppState.materials,
+            tags: AppState.tags,
+            settings: AppState.settings
+        });
+        if (res.success && res.data) {
+            setAppStateData(res.data);
+            showToast({ message: 'Google Drive synced successfully!', type: 'success' });
+        } else {
+            showToast({ message: res.error || 'Google Drive sync failed', type: 'error' });
+        }
+    });
+
+    // Mobile Bottom Navigation Bar Events
+    document.querySelectorAll('.mobile-nav-btn[data-view]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            switchView(btn.dataset.view);
+        });
+    });
+
+    document.getElementById('mobileBtnQuickAdd')?.addEventListener('click', () => {
+        openItemModal(null, null, 'task');
+    });
 
     // Trash Button in Header
     document.getElementById('btnTrashHeader')?.addEventListener('click', openTrashModal);
@@ -454,4 +525,18 @@ window.addEventListener('DOMContentLoaded', async () => {
         renderCounters();
         updateHeaderDateDisplay();
     }, 60000);
+
+    // Register PWA Service Worker for offline capabilities & mobile installation
+    if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js').catch((err) => {
+                console.warn('[PWA] Service Worker registration failed:', err);
+            });
+        });
+    }
+
+    // Initialize Google Identity Services if client ID is configured
+    try {
+        initGisClient();
+    } catch (e) {}
 });

@@ -78,6 +78,8 @@ describe('Feature 1: Free To-Do List (Tasks without Course Requirement)', () => 
         expect(created.id).toBeDefined();
         expect(created.subjectId).toBeNull();
         expect(created.completed).toBe(false);
+        expect(created.typeId).toBe('tt_todo');
+        expect(created.typeName).toBe('To-Do');
         expect(AppState.items.length).toBe(1);
 
         // Toggle completion
@@ -166,6 +168,78 @@ describe('Feature 1: Free To-Do List (Tasks without Course Requirement)', () => 
         expect(AppState.config.isGeneralPinned).toBe(true);
         await togglePinGeneralTasks();
         expect(AppState.config.isGeneralPinned).toBe(false);
+    });
+
+    it('should default category type to "To-Do" (tt_todo) for general tasks, and "HW" (tt_hw) for course tasks', async () => {
+        // 1. General task (no subject) -> defaults to To-Do
+        const genTask = await addOrUpdateItem({
+            title: 'Buy groceries',
+            subjectId: null
+        });
+        expect(genTask.typeId).toBe('tt_todo');
+        expect(genTask.typeName).toBe('To-Do');
+        expect(genTask.typeIcon).toBe('📝');
+
+        // 2. Course task (with subject) -> defaults to HW
+        AppState.subjects = [{ id: 'subj_math', title: 'Calculus' }];
+        const courseTask = await addOrUpdateItem({
+            title: 'Calculus Assignment 1',
+            subjectId: 'subj_math'
+        });
+        expect(courseTask.typeId).toBe('tt_hw');
+        expect(courseTask.typeName).toBe('HW');
+        expect(courseTask.typeIcon).toBe('📚');
+    });
+
+    it('should correct legacy general tasks that defaulted to homework (tt_hw) during normalization', () => {
+        const raw = {
+            config: {
+                taskTypes: [
+                    { id: "tt_hw", name: "HW", icon: "📚" },
+                    { id: "tt_project", name: "Project", icon: "💻" },
+                    { id: "tt_custom", name: "Custom", icon: "📌" }
+                ]
+            },
+            subjects: [{ id: 's1', title: 'Physics' }],
+            items: [
+                // General task that previously had tt_hw erroneously assigned
+                {
+                    id: 'gen_old',
+                    title: 'Wash the car',
+                    kind: 'task',
+                    typeId: 'tt_hw',
+                    typeName: 'HW',
+                    subjectId: null,
+                    dueDate: null
+                },
+                // Course task that legitimately has tt_hw
+                {
+                    id: 'course_hw',
+                    title: 'Physics HW 1',
+                    kind: 'task',
+                    typeId: 'tt_hw',
+                    typeName: 'HW',
+                    subjectId: 's1',
+                    dueDate: '2026-11-25T12:00:00Z',
+                    extraInfo: { number: '1' }
+                }
+            ]
+        };
+
+        const normalized = normalizeData(raw);
+        // Ensure tt_todo was added to taskTypes
+        expect(normalized.config.taskTypes.some(t => t.id === 'tt_todo')).toBe(true);
+
+        // General task was corrected to To-Do
+        const genItem = normalized.items.find(i => i.id === 'gen_old');
+        expect(genItem.typeId).toBe('tt_todo');
+        expect(genItem.typeName).toBe('To-Do');
+        expect(genItem.typeIcon).toBe('📝');
+
+        // Course task maintained HW
+        const courseItem = normalized.items.find(i => i.id === 'course_hw');
+        expect(courseItem.typeId).toBe('tt_hw');
+        expect(courseItem.typeName).toBe('HW');
     });
 });
 

@@ -687,7 +687,7 @@ function renderWeekAgendaGrid(wrapper, calendarDate, filteredItems, container) {
                     </div>
                     <div class="week-card-title">${escapeHtml(item.title)}</div>
                     <div class="week-card-meta">
-                        <span><span class="meta-icon">${isTask ? ICONS.task : ICONS.event}</span> ${escapeHtml(item.typeName || (isTask ? 'Task' : 'Event'))}</span>
+                        <span><span class="meta-icon">${isTask ? ICONS.task : ICONS.event}</span> ${escapeHtml(item.typeName || (isTask ? (!item.subjectId ? 'To-Do' : 'Task') : 'Event'))}</span>
                     </div>
                 `;
 

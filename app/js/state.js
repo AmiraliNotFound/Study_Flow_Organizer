@@ -24,6 +24,7 @@ export const DEFAULT_CONFIG = {
         { id: "tt_project", name: "Project", icon: "💻" },
         { id: "tt_report", name: "Lab Report", icon: "📄" },
         { id: "tt_reading", name: "Reading", icon: "📖" },
+        { id: "tt_todo", name: "To-Do", icon: "📝" },
         { id: "tt_custom", name: "Custom", icon: "📌" }
     ],
     eventTypes: [
@@ -95,15 +96,27 @@ export function notify(eventName = 'change', payload = null) {
 export function normalizeData(raw) {
     if (!raw || typeof raw !== 'object') raw = {};
 
+    let taskTypes = Array.isArray(raw.config?.taskTypes) && raw.config.taskTypes.length > 0
+        ? raw.config.taskTypes.map(t => ({ ...t }))
+        : JSON.parse(JSON.stringify(DEFAULT_CONFIG.taskTypes));
+
+    if (!taskTypes.some(t => t.id === 'tt_todo')) {
+        const customIdx = taskTypes.findIndex(t => t.id === 'tt_custom');
+        const todoType = { id: "tt_todo", name: "To-Do", icon: "📝" };
+        if (customIdx !== -1) {
+            taskTypes.splice(customIdx, 0, todoType);
+        } else {
+            taskTypes.push(todoType);
+        }
+    }
+
     const config = {
-        taskTypes: Array.isArray(raw.config?.taskTypes) && raw.config.taskTypes.length > 0
-            ? raw.config.taskTypes.map(t => ({ ...t }))
-            : JSON.parse(JSON.stringify(DEFAULT_CONFIG.taskTypes)),
+        taskTypes,
         eventTypes: Array.isArray(raw.config?.eventTypes) && raw.config.eventTypes.length > 0
             ? raw.config.eventTypes.map(t => ({ ...t }))
             : JSON.parse(JSON.stringify(DEFAULT_CONFIG.eventTypes)),
         materialTypes: [{ id: "mat_folder", name: "Course Folder", icon: "📁" }],
-        tags: Array.isArray(raw.config?.tags) && raw.config.tags.length > 0
+        tags: Array.isArray(raw.config?.tags)
             ? [...new Set(raw.config.tags)]
             : [...DEFAULT_CONFIG.tags]
     };
@@ -139,13 +152,30 @@ export function normalizeData(raw) {
         const cleanId = (item.id && typeof item.id === 'string' && item.id.trim())
             ? item.id.trim()
             : `item_${Date.now()}_${idx}_${Math.random().toString(36).slice(2, 6)}`;
+        const cleanSubjectId = (item.subjectId && typeof item.subjectId === 'string' && item.subjectId.trim()) ? item.subjectId.trim() : null;
+
+        const defaultTypeId = isTask ? (cleanSubjectId ? 'tt_hw' : 'tt_todo') : 'et_quiz';
+        const defaultTypeName = isTask ? (cleanSubjectId ? 'HW' : 'To-Do') : 'Quiz';
+        const defaultTypeIcon = isTask ? (cleanSubjectId ? '📚' : '📝') : '📝';
+
+        let itemTypeId = item.typeId;
+        let itemTypeName = item.typeName;
+        let itemTypeIcon = item.typeIcon;
+
+        // If general task was previously defaulted to tt_hw without an explicit HW number
+        if (isTask && !cleanSubjectId && (!itemTypeId || (itemTypeId === 'tt_hw' && (!item.extraInfo?.number || item.extraInfo?.number === '')))) {
+            itemTypeId = 'tt_todo';
+            itemTypeName = 'To-Do';
+            itemTypeIcon = '📝';
+        }
+
         return {
             id: cleanId,
             kind: isTask ? 'task' : 'event',
-            typeId: item.typeId || (isTask ? 'tt_hw' : 'et_quiz'),
-            typeName: item.typeName || (isTask ? 'HW' : 'Quiz'),
-            typeIcon: item.typeIcon || (isTask ? '📚' : '📝'),
-            subjectId: (item.subjectId && typeof item.subjectId === 'string' && item.subjectId.trim()) ? item.subjectId.trim() : null,
+            typeId: itemTypeId || defaultTypeId,
+            typeName: itemTypeName || defaultTypeName,
+            typeIcon: itemTypeIcon || defaultTypeIcon,
+            subjectId: cleanSubjectId,
             title: item.title || "",
             extraInfo: {
                 number: item.extraInfo?.number ?? item.detailNumber ?? "",
@@ -443,6 +473,23 @@ export async function addGlobalTag(tagName) {
     }
 }
 
+export async function removeGlobalTag(tagName) {
+    const clean = (tagName || '').trim().replace(/^#+/, '');
+    if (!clean) return;
+    if (AppState.config && Array.isArray(AppState.config.tags)) {
+        AppState.config.tags = AppState.config.tags.filter(t => t.toLowerCase() !== clean.toLowerCase());
+    }
+    AppState.subjects.forEach(s => {
+        if (Array.isArray(s.tags)) {
+            s.tags = s.tags.filter(t => t.toLowerCase() !== clean.toLowerCase());
+        }
+    });
+    if (AppState.activeTagFilter && AppState.activeTagFilter.toLowerCase() === clean.toLowerCase()) {
+        AppState.activeTagFilter = 'all';
+    }
+    await persistCurrentState();
+}
+
 export async function togglePinGeneralTasks() {
     if (!AppState.config) AppState.config = {};
     AppState.config.isGeneralPinned = !AppState.config.isGeneralPinned;
@@ -475,10 +522,20 @@ export async function addOrUpdateItem(itemData) {
         } else {
             const cleanSubjectId = (itemData.subjectId && typeof itemData.subjectId === 'string' && itemData.subjectId.trim()) ? itemData.subjectId.trim() : null;
             const cleanDueDate = (itemData.dueDate === null || itemData.dueDate === "") ? null : (itemData.dueDate || null);
+            const isTask = itemData.kind !== 'event';
+            const defaultType = isTask
+                ? (cleanSubjectId
+                    ? (AppState.config?.taskTypes?.[0] || { id: 'tt_hw', name: 'HW', icon: '📚' })
+                    : (AppState.config?.taskTypes?.find(t => t.id === 'tt_todo') || { id: 'tt_todo', name: 'To-Do', icon: '📝' }))
+                : (AppState.config?.eventTypes?.[0] || { id: 'et_quiz', name: 'Quiz', icon: '📝' });
+
             finalItem = {
                 completed: false,
                 inProgress: Boolean(itemData.inProgress),
                 createdAt: itemData.createdAt || new Date().toISOString(),
+                typeId: defaultType.id,
+                typeName: defaultType.name,
+                typeIcon: defaultType.icon,
                 ...itemData,
                 id: cleanId,
                 subjectId: cleanSubjectId,
@@ -489,11 +546,21 @@ export async function addOrUpdateItem(itemData) {
     } else {
         const cleanSubjectId = (itemData.subjectId && typeof itemData.subjectId === 'string' && itemData.subjectId.trim()) ? itemData.subjectId.trim() : null;
         const cleanDueDate = (itemData.dueDate === null || itemData.dueDate === "") ? null : (itemData.dueDate || null);
+        const isTask = itemData.kind !== 'event';
+        const defaultType = isTask
+            ? (cleanSubjectId
+                ? (AppState.config?.taskTypes?.[0] || { id: 'tt_hw', name: 'HW', icon: '📚' })
+                : (AppState.config?.taskTypes?.find(t => t.id === 'tt_todo') || { id: 'tt_todo', name: 'To-Do', icon: '📝' }))
+            : (AppState.config?.eventTypes?.[0] || { id: 'et_quiz', name: 'Quiz', icon: '📝' });
+
         const newId = `item_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
         finalItem = {
             completed: false,
             inProgress: Boolean(itemData.inProgress),
             createdAt: new Date().toISOString(),
+            typeId: defaultType.id,
+            typeName: defaultType.name,
+            typeIcon: defaultType.icon,
             ...itemData,
             id: newId,
             subjectId: cleanSubjectId,

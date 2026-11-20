@@ -481,6 +481,41 @@ export const SETTINGS_MODAL_HTML = `<div id="settingsModal" class="modal-overlay
 
                         <!-- TAB 3: STORAGE & BACKUPS (Ultra-minimalist, no slop) -->
                         <div class="settings-tab-pane" data-pane="storage">
+                            <!-- Google Drive Mobile Cloud Sync -->
+                            <div class="settings-section">
+                                <span class="settings-section-title">Google Drive Mobile Cloud Sync</span>
+                                <div class="settings-storage-card" style="padding: 14px;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <span id="gdriveStatusDot" class="status-dot"></span>
+                                            <strong id="gdriveStatusText" style="font-size: 0.84rem;">Not Connected</strong>
+                                        </div>
+                                        <div id="gdriveActionButtons" style="display: flex; gap: 6px;">
+                                            <button type="button" class="btn btn-sm btn-primary" id="btnGdriveSignIn">
+                                                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 4px;"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg> Connect
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-secondary hidden" id="btnGdriveSyncNow">
+                                                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 4px;"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg> Sync Now
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-secondary hidden" id="btnGdriveSignOut" title="Sign out" style="color: var(--color-urgent);">
+                                                Disconnect
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div style="font-size: 0.74rem; color: var(--text-muted); margin-bottom: 8px; line-height: 1.4;">
+                                        Syncs seamlessly with Android while your laptop is off using your personal Google Drive (100% free, zero third-party cloud servers).
+                                    </div>
+                                    <div class="form-group" style="margin-bottom: 4px;">
+                                        <label for="gdriveClientIdInput" style="font-size: 0.72rem; color: var(--text-muted); display: block; margin-bottom: 3px;">Google OAuth Client ID</label>
+                                        <div style="display: flex; gap: 6px;">
+                                            <input type="text" id="gdriveClientIdInput" class="form-input" placeholder="e.g. 123456789-abcdef.apps.googleusercontent.com" style="font-size: 0.75rem; padding: 6px 10px; height: 32px; flex: 1;">
+                                            <button type="button" class="btn btn-secondary btn-sm" id="btnSaveGdriveClientId">Save</button>
+                                        </div>
+                                    </div>
+                                    <div id="gdriveUserEmailText" style="font-size: 0.72rem; color: var(--color-primary); margin-top: 6px; display: none;"></div>
+                                </div>
+                            </div>
+
                             <!-- AppData Path Box -->
                             <div class="settings-section">
                                 <span class="settings-section-title">Storage Location</span>

@@ -5,10 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Study Flow | Smart Academic Schedule, Deadlines & Materials Hub</title>
     
-    <!-- Application Icons -->
+    <!-- Application Icons & PWA Manifest -->
     <link rel="icon" type="image/x-icon" href="./favicon.ico">
     <link rel="icon" type="image/png" href="./icon.png">
     <link rel="apple-touch-icon" href="./icon.png">
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#161b22">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Study Flow">
+
+    <!-- Google Identity Services (GIS) for Google Drive Auth (Async) -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
 
     <!-- Modular Stylesheets -->
     <link rel="stylesheet" href="./css/variables.css">
@@ -41,6 +50,14 @@
             </div>
 
             <div class="header-actions">
+                <!-- Google Drive Cloud Sync Trigger / Status Indicator -->
+                <button type="button" class="header-icon-btn" id="btnCloudSync" title="Google Drive Cloud Sync">
+                    <svg viewBox="0 0 24 24" class="cloud-sync-icon" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/>
+                    </svg>
+                    <span class="sync-status-dot hidden" id="syncStatusDot"></span>
+                </button>
+
                 <!-- Minimalist Single-Color AI Schedule Assistant Trigger -->
                 <button type="button" class="header-icon-btn" id="btnOpenAiModal" title="AI Schedule Assistant (Hold Space / Alt+A to speak, click to open)">
                     <svg viewBox="0 0 24 24" class="ai-sparkle-icon" fill="currentColor">
@@ -190,8 +207,8 @@
             <div class="tags-filter-strip-row" id="tagsFilterStripRow">
                 <span class="tags-filter-title">Topics</span>
                 <div class="tags-pills-scroll-wrap" id="tagsPillsScrollWrap"></div>
-                <button type="button" class="btn-add-tag-filter" id="btnOpenNewTagModal" title="Manage Topics">
-                    <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <button type="button" class="btn-add-tag-filter" id="btnOpenNewTagModal" title="Manage Topics & Tags">
+                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
                 </button>
             </div>
         </div>
@@ -234,6 +251,31 @@
             </div>
         </div>
     </div>
+
+    <!-- ========================================================================
+         MOBILE BOTTOM NAVIGATION (Optimized for Android / Mobile screens < 768px)
+         ======================================================================== -->
+    <nav class="mobile-bottom-nav" id="mobileBottomNav" aria-label="Mobile Navigation">
+        <button type="button" class="mobile-nav-btn active" data-view="grid" id="mobileBtnCards">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            <span>Courses</span>
+        </button>
+        <button type="button" class="mobile-nav-btn" data-view="calendar" id="mobileBtnCalendar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <span>Calendar</span>
+        </button>
+        <button type="button" class="mobile-nav-btn mobile-fab-btn" id="mobileBtnQuickAdd" title="Create New">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+        <button type="button" class="mobile-nav-btn" data-view="kanban" id="mobileBtnKanban">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h4v16H4zM10 4h4v10h-4zM16 4h4v13h-4z"/></svg>
+            <span>Kanban</span>
+        </button>
+        <button type="button" class="mobile-nav-btn" data-view="timeline" id="mobileBtnTimeline">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <span>Timeline</span>
+        </button>
+    </nav>
 
     <!-- ========================================================================
          DYNAMIC MODAL MOUNT CONTAINER

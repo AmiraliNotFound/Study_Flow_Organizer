@@ -97,6 +97,14 @@ export function openItemModal(itemId = null, preselectedSubjectId = null, defaul
         }
         document.getElementById('itemSubjectSelect').value = targetSubjId;
 
+        const isGeneral = !targetSubjId;
+        if (defaultKind === 'task') {
+            const todoType = AppState.config.taskTypes?.find(t => t.id === 'tt_todo');
+            activeTypeId = isGeneral ? (todoType?.id || 'tt_todo') : (AppState.config.taskTypes?.[0]?.id || 'tt_hw');
+        } else {
+            activeTypeId = AppState.config.eventTypes?.[0]?.id || 'et_quiz';
+        }
+
         const shouldBeDeadlineless = forceDeadlineless || (!initialDueDate && (preselectedSubjectId === null || preselectedSubjectId === 'general') && AppState.subjects.length === 0);
 
         if (shouldBeDeadlineless) {
@@ -113,7 +121,7 @@ export function openItemModal(itemId = null, preselectedSubjectId = null, defaul
         }
     }
 
-    setKind(activeKind);
+    setKind(activeKind, true);
     updateTypePills();
 
     modal.classList.add('is-active');
@@ -125,25 +133,37 @@ export function closeItemModal() {
     activeItemId = null;
 }
 
-function setKind(kind) {
+function setKind(kind, preserveType = false) {
     activeKind = kind;
     const btnTask = document.getElementById('btnKindTask');
     const btnEvent = document.getElementById('btnKindEvent');
     const taskFields = document.getElementById('taskExtraFieldsWrap');
     const eventFields = document.getElementById('eventExtraFieldsWrap');
 
+    const types = kind === 'task' ? AppState.config.taskTypes : AppState.config.eventTypes;
+    const isCurrentTypeValid = types.some(t => t.id === activeTypeId);
+
+    if (!preserveType || !isCurrentTypeValid) {
+        const currentSubj = subjectSelect ? subjectSelect.getValue() : document.getElementById('itemSubjectSelect')?.value;
+        const isGeneral = !currentSubj;
+        if (kind === 'task') {
+            const todoType = AppState.config.taskTypes?.find(t => t.id === 'tt_todo');
+            activeTypeId = isGeneral ? (todoType?.id || 'tt_todo') : (AppState.config.taskTypes?.[0]?.id || 'tt_hw');
+        } else {
+            activeTypeId = AppState.config.eventTypes?.[0]?.id || 'et_quiz';
+        }
+    }
+
     if (kind === 'task') {
         btnTask.className = 'kind-tab-btn active kind-task';
         btnEvent.className = 'kind-tab-btn';
         taskFields.classList.remove('hidden');
         eventFields.classList.add('hidden');
-        activeTypeId = AppState.config.taskTypes[0]?.id || 'tt_hw';
     } else {
         btnTask.className = 'kind-tab-btn';
         btnEvent.className = 'kind-tab-btn active kind-event';
         taskFields.classList.add('hidden');
         eventFields.classList.remove('hidden');
-        activeTypeId = AppState.config.eventTypes[0]?.id || 'et_quiz';
     }
 
     updateTypePills();
@@ -198,6 +218,27 @@ export function initItemModalEvents() {
             onChange: (val) => {
                 const hiddenInput = document.getElementById('itemSubjectSelect');
                 if (hiddenInput) hiddenInput.value = val || '';
+
+                if (!activeItemId && activeKind === 'task') {
+                    const isGeneral = !val;
+                    const todoType = AppState.config.taskTypes?.find(t => t.id === 'tt_todo') || { id: 'tt_todo' };
+                    const hwType = AppState.config.taskTypes?.[0] || { id: 'tt_hw' };
+                    const titleInput = document.getElementById('itemTitleInput');
+
+                    if (isGeneral && activeTypeId === hwType.id) {
+                        activeTypeId = todoType.id;
+                        updateTypePills();
+                        if (titleInput && titleInput.value === 'HW') {
+                            titleInput.value = '';
+                        }
+                    } else if (!isGeneral && activeTypeId === todoType.id) {
+                        activeTypeId = hwType.id;
+                        updateTypePills();
+                        if (titleInput && titleInput.value === 'To-Do') {
+                            titleInput.value = '';
+                        }
+                    }
+                }
             }
         });
     }
@@ -317,7 +358,14 @@ export function initItemModalEvents() {
         }
 
         const types = activeKind === 'task' ? AppState.config.taskTypes : AppState.config.eventTypes;
-        const matchedType = types.find(t => t.id === activeTypeId) || types[0];
+        const isGeneral = !subjectId;
+        const matchedType = types.find(t => t.id === activeTypeId) || (
+            activeKind === 'task'
+                ? (isGeneral
+                    ? (types.find(t => t.id === 'tt_todo') || { id: 'tt_todo', name: 'To-Do', icon: '📝' })
+                    : (types[0] || { id: 'tt_hw', name: 'HW', icon: '📚' }))
+                : (types[0] || { id: 'et_quiz', name: 'Quiz', icon: '📝' })
+        );
 
         const itemPayload = {
             id: activeItemId,

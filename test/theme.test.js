@@ -133,4 +133,81 @@ describe('Theme & Rigid Color System', () => {
         delete globalThis.window;
         delete globalThis.localStorage;
     });
+
+    it('should dynamically sync General tasks banner CSS custom properties with active themes', () => {
+        const rootProps = {};
+        const mockDoc = {
+            documentElement: {
+                style: {
+                    setProperty: (k, v) => { rootProps[k] = v; },
+                    getPropertyValue: (k) => rootProps[k] ?? ''
+                }
+            },
+            body: {
+                classList: {
+                    toggle: () => {},
+                    add: () => {},
+                    remove: () => {}
+                },
+                dataset: {}
+            }
+        };
+
+        globalThis.document = mockDoc;
+        globalThis.localStorage = {
+            getItem: () => null,
+            setItem: () => {},
+            removeItem: () => {}
+        };
+
+        // 1. Default Teal Slate palette
+        applyPalette('default');
+        expect(rootProps['--general-banner-bg']).toBeDefined();
+        expect(rootProps['--general-banner-bg']).toContain('linear-gradient');
+        // Must NOT be the old hardcoded blue (rgba(30, 41, 59...))
+        expect(rootProps['--general-banner-bg']).not.toContain('30, 41, 59');
+        expect(rootProps['--general-banner-text']).toBe(PALETTE_PRESETS.default.colors.text);
+
+        // 2. Ultra Minimalist Black palette
+        applyPalette('black');
+        expect(rootProps['--general-banner-bg']).toBeDefined();
+        // Must be carbon/black, never blue
+        expect(rootProps['--general-banner-bg']).not.toContain('30, 41, 59');
+        expect(rootProps['--general-banner-bg']).not.toContain('#1e293b');
+        expect(rootProps['--general-banner-text']).toBe('#ffffff');
+
+        // 3. Clean Daylight (nord_light) palette
+        applyPalette('nord_light');
+        expect(rootProps['--general-banner-bg']).toBeDefined();
+        expect(rootProps['--general-banner-text']).toBe('#0f172a');
+        expect(rootProps['--general-banner-subtitle']).toBe('#334155');
+
+        // 4. Flat mode style
+        applyPalette('default');
+        // Glass mode has linear-gradient
+        expect(rootProps['--general-banner-bg']).toContain('linear-gradient');
+
+        delete globalThis.document;
+        delete globalThis.localStorage;
+    });
+
+    it('should use a true vector pushpin SVG for ICONS.pin and ICONS.pinFilled without emojis', async () => {
+        const { ICONS } = await import('../app/js/icons.js');
+
+        expect(ICONS.pin).toBeDefined();
+        expect(ICONS.pinFilled).toBeDefined();
+
+        // Must be valid SVG elements
+        expect(ICONS.pin).toContain('<svg');
+        expect(ICONS.pinFilled).toContain('<svg');
+
+        // Must contain standard pushpin elements: needle line and pin head/body path
+        expect(ICONS.pin).toContain('<line x1="12" y1="17" x2="12" y2="22"');
+        expect(ICONS.pinFilled).toContain('<line x1="12" y1="17" x2="12" y2="22"');
+        expect(ICONS.pinFilled).toContain('fill="currentColor"');
+
+        // Must not contain any emoji characters
+        expect(ICONS.pin).not.toMatch(/[\u{1F300}-\u{1F9FF}]/u);
+        expect(ICONS.pinFilled).not.toMatch(/[\u{1F300}-\u{1F9FF}]/u);
+    });
 });

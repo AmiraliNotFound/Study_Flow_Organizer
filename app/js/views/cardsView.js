@@ -22,7 +22,6 @@ import {
     restoreItem,
     deleteMaterial,
     togglePinSubject,
-    reorderSubjects,
     addOrUpdateItem,
     persistCurrentState
 } from '../state.js';
@@ -35,10 +34,33 @@ import { openFolder } from '../api.js';
 import { ICONS } from '../icons.js';
 import { showToast, confirmAction } from '../toast.js';
 
-let draggedSubjectId = null;
+let cardMenuListenersInitialized = false;
+
+function setupCardMenuListeners() {
+    if (cardMenuListenersInitialized) return;
+    cardMenuListenersInitialized = true;
+    if (typeof document !== 'undefined') {
+        document.addEventListener('click', (e) => {
+            const target = e.target;
+            if (!target || typeof target.closest !== 'function' || !target.closest('.card-menu-dropdown-wrap')) {
+                document.querySelectorAll('.card-dropdown-floating-menu').forEach(m => m.classList.add('hidden'));
+                document.querySelectorAll('.subject-card').forEach(c => c.classList.remove('has-open-menu'));
+            }
+        });
+    }
+    if (typeof window !== 'undefined') {
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.card-dropdown-floating-menu').forEach(m => m.classList.add('hidden'));
+                document.querySelectorAll('.subject-card').forEach(c => c.classList.remove('has-open-menu'));
+            }
+        });
+    }
+}
 
 export function renderCardsView(container) {
     if (!container) return;
+    setupCardMenuListeners();
     container.innerHTML = "";
 
     const filteredItems = getFilteredItems();
@@ -198,15 +220,22 @@ function createGeneralTasksCard(container, hasSearch) {
                     ${ICONS.task}
                     Free To-Do
                 </span>
-                ${isPinned ? `<span class="pinned-badge" title="Pinned to top">${ICONS.pinFilled} Pinned</span>` : ''}
+                ${isPinned ? `<span class="pinned-badge btn-badge-unpin-general" role="button" tabindex="0" title="Click to unpin list">${ICONS.pinFilled} Pinned</span>` : ''}
             </div>
-            <div class="subject-menu-btns">
-                <button type="button" class="subject-menu-btn btn-pin-general ${isPinned ? 'is-active-pin' : ''}" title="${isPinned ? 'Unpin list' : 'Pin to top'}">
-                    ${isPinned ? ICONS.pinFilled : ICONS.pin}
+            <div class="card-menu-dropdown-wrap">
+                <button type="button" class="subject-menu-btn card-dots-menu-btn" title="Options" aria-label="General tasks options" aria-haspopup="true">
+                    ${ICONS.dotsVertical}
                 </button>
-                <button type="button" class="subject-menu-btn btn-add-general-item" title="Add Free Task">
-                    ${ICONS.plus}
-                </button>
+                <div class="card-dropdown-floating-menu hidden" role="menu">
+                    <button type="button" class="card-dropdown-item btn-menu-pin-general ${isPinned ? 'is-active-pin' : ''}">
+                        <span class="dropdown-item-icon">${isPinned ? ICONS.pinFilled : ICONS.pin}</span>
+                        <span>${isPinned ? 'Unpin list' : 'Pin to top'}</span>
+                    </button>
+                    <button type="button" class="card-dropdown-item btn-menu-add-general">
+                        <span class="dropdown-item-icon">${ICONS.plus}</span>
+                        <span>Add Free Task</span>
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -221,16 +250,37 @@ function createGeneralTasksCard(container, hasSearch) {
         </div>
     `;
 
-    banner.querySelector('.btn-pin-general')?.addEventListener('click', async (e) => {
+    const dotsBtn = banner.querySelector('.card-dots-menu-btn');
+    const menu = banner.querySelector('.card-dropdown-floating-menu');
+
+    dotsBtn?.addEventListener('click', (e) => {
         e.stopPropagation();
+        const isHidden = menu.classList.contains('hidden');
+        document.querySelectorAll('.card-dropdown-floating-menu').forEach(m => m.classList.add('hidden'));
+        document.querySelectorAll('.subject-card').forEach(c => c.classList.remove('has-open-menu'));
+        if (isHidden) {
+            menu.classList.remove('hidden');
+            card.classList.add('has-open-menu');
+        }
+    });
+
+    const togglePinGeneral = async (e) => {
+        e.stopPropagation();
+        menu?.classList.add('hidden');
+        card.classList.remove('has-open-menu');
         if (!AppState.config) AppState.config = {};
         AppState.config.isGeneralPinned = !AppState.config.isGeneralPinned;
         await persistCurrentState(true);
         renderCardsView(container);
-    });
+    };
 
-    banner.querySelector('.btn-add-general-item')?.addEventListener('click', (e) => {
+    banner.querySelector('.btn-menu-pin-general')?.addEventListener('click', togglePinGeneral);
+    banner.querySelector('.btn-badge-unpin-general')?.addEventListener('click', togglePinGeneral);
+
+    banner.querySelector('.btn-menu-add-general')?.addEventListener('click', (e) => {
         e.stopPropagation();
+        menu?.classList.add('hidden');
+        card.classList.remove('has-open-menu');
         openItemModal(null, 'general', 'task', null, true);
     });
 
@@ -270,57 +320,6 @@ function createSubjectCard(subj, container, hasSearch) {
     const card = document.createElement('div');
     card.className = `subject-card view-flow-in ${subj.isPinned ? 'is-pinned-card' : ''}`;
     card.dataset.subjectId = subj.id;
-    card.draggable = true;
-
-    // --- Drag and Drop Handlers (Req 9) ---
-    card.addEventListener('dragstart', (e) => {
-        draggedSubjectId = subj.id;
-        card.classList.add('is-dragging');
-        e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/plain', subj.id);
-    });
-
-    card.addEventListener('dragend', () => {
-        card.classList.remove('is-dragging');
-        document.querySelectorAll('.subject-card').forEach(c => c.classList.remove('drag-over-top', 'drag-over-bottom'));
-    });
-
-    card.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
-        if (draggedSubjectId && draggedSubjectId !== subj.id) {
-            const rect = card.getBoundingClientRect();
-            const midY = rect.top + rect.height / 2;
-            if (e.clientY < midY) {
-                card.classList.add('drag-over-top');
-                card.classList.remove('drag-over-bottom');
-            } else {
-                card.classList.add('drag-over-bottom');
-                card.classList.remove('drag-over-top');
-            }
-        }
-    });
-
-    card.addEventListener('dragleave', () => {
-        card.classList.remove('drag-over-top', 'drag-over-bottom');
-    });
-
-    card.addEventListener('drop', async (e) => {
-        e.preventDefault();
-        card.classList.remove('drag-over-top', 'drag-over-bottom');
-        if (!draggedSubjectId || draggedSubjectId === subj.id) return;
-
-        const allSubjs = [...AppState.subjects];
-        const sourceIdx = allSubjs.findIndex(s => s.id === draggedSubjectId);
-        const targetIdx = allSubjs.findIndex(s => s.id === subj.id);
-
-        if (sourceIdx !== -1 && targetIdx !== -1) {
-            const [moved] = allSubjs.splice(sourceIdx, 1);
-            allSubjs.splice(targetIdx, 0, moved);
-            await reorderSubjects(allSubjs);
-        }
-        draggedSubjectId = null;
-    });
 
     // --- Header Banner ---
     const banner = document.createElement('div');
@@ -339,24 +338,30 @@ function createSubjectCard(subj, container, hasSearch) {
                     ${ICONS.viewCards}
                     Course
                 </span>
-                ${subj.isPinned ? `<span class="pinned-badge" title="Pinned to top">${ICONS.pinFilled} Pinned</span>` : ''}
+                ${subj.isPinned ? `<span class="pinned-badge btn-badge-unpin-subj" role="button" tabindex="0" title="Click to unpin course">${ICONS.pinFilled} Pinned</span>` : ''}
             </div>
-            <div class="subject-menu-btns">
-                <!-- Pin / Unpin Button (Vectorized SVG) -->
-                <button type="button" class="subject-menu-btn btn-pin-subj ${subj.isPinned ? 'is-active-pin' : ''}" title="${subj.isPinned ? 'Unpin course' : 'Pin course to top'}">
-                    ${subj.isPinned ? ICONS.pinFilled : ICONS.pin}
+            <div class="card-menu-dropdown-wrap">
+                <button type="button" class="subject-menu-btn card-dots-menu-btn" title="Options" aria-label="Course options" aria-haspopup="true">
+                    ${ICONS.dotsVertical}
                 </button>
-                <!-- Drag Handle indicator -->
-                <span class="subject-drag-handle" title="Drag to reorder card">${ICONS.dragGrip}</span>
-                <button type="button" class="subject-menu-btn btn-add-item" title="Add Task or Event">
-                    ${ICONS.plus}
-                </button>
-                <button type="button" class="subject-menu-btn btn-add-folder" title="Link Course Folder">
-                    ${ICONS.folder}
-                </button>
-                <button type="button" class="subject-menu-btn btn-edit-subj" title="Edit Subject Details">
-                    ${ICONS.edit}
-                </button>
+                <div class="card-dropdown-floating-menu hidden" role="menu">
+                    <button type="button" class="card-dropdown-item btn-menu-pin-subj ${subj.isPinned ? 'is-active-pin' : ''}">
+                        <span class="dropdown-item-icon">${subj.isPinned ? ICONS.pinFilled : ICONS.pin}</span>
+                        <span>${subj.isPinned ? 'Unpin course' : 'Pin to top'}</span>
+                    </button>
+                    <button type="button" class="card-dropdown-item btn-menu-add-item">
+                        <span class="dropdown-item-icon">${ICONS.plus}</span>
+                        <span>Add Task or Event</span>
+                    </button>
+                    <button type="button" class="card-dropdown-item btn-menu-add-folder">
+                        <span class="dropdown-item-icon">${ICONS.folder}</span>
+                        <span>Link Course Folder</span>
+                    </button>
+                    <button type="button" class="card-dropdown-item btn-menu-edit-subj">
+                        <span class="dropdown-item-icon">${ICONS.edit}</span>
+                        <span>Edit Course</span>
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -372,23 +377,48 @@ function createSubjectCard(subj, container, hasSearch) {
         </div>
     `;
 
-    banner.querySelector('.btn-pin-subj').addEventListener('click', async (e) => {
+    const dotsBtn = banner.querySelector('.card-dots-menu-btn');
+    const menu = banner.querySelector('.card-dropdown-floating-menu');
+
+    dotsBtn?.addEventListener('click', (e) => {
         e.stopPropagation();
-        await togglePinSubject(subj.id);
+        const isHidden = menu.classList.contains('hidden');
+        document.querySelectorAll('.card-dropdown-floating-menu').forEach(m => m.classList.add('hidden'));
+        document.querySelectorAll('.subject-card').forEach(c => c.classList.remove('has-open-menu'));
+        if (isHidden) {
+            menu.classList.remove('hidden');
+            card.classList.add('has-open-menu');
+        }
     });
 
-    banner.querySelector('.btn-add-item').addEventListener('click', (e) => {
+    const togglePinCourse = async (e) => {
         e.stopPropagation();
+        menu?.classList.add('hidden');
+        card.classList.remove('has-open-menu');
+        await togglePinSubject(subj.id);
+    };
+
+    banner.querySelector('.btn-menu-pin-subj')?.addEventListener('click', togglePinCourse);
+    banner.querySelector('.btn-badge-unpin-subj')?.addEventListener('click', togglePinCourse);
+
+    banner.querySelector('.btn-menu-add-item')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        menu?.classList.add('hidden');
+        card.classList.remove('has-open-menu');
         openItemModal(null, subj.id);
     });
 
-    banner.querySelector('.btn-add-folder').addEventListener('click', (e) => {
+    banner.querySelector('.btn-menu-add-folder')?.addEventListener('click', (e) => {
         e.stopPropagation();
+        menu?.classList.add('hidden');
+        card.classList.remove('has-open-menu');
         openFolderModal(null, subj.id);
     });
 
-    banner.querySelector('.btn-edit-subj').addEventListener('click', (e) => {
+    banner.querySelector('.btn-menu-edit-subj')?.addEventListener('click', (e) => {
         e.stopPropagation();
+        menu?.classList.add('hidden');
+        card.classList.remove('has-open-menu');
         openSubjectModal(subj.id);
     });
 
@@ -560,7 +590,9 @@ function renderCardScheduleTasks(card, subj, scheduleContent, hasSearch, contain
             if (!parsed) return;
 
             const types = parsed.kind === 'task' ? AppState.config.taskTypes : AppState.config.eventTypes;
-            const defaultType = types[0] || { id: 'tt_hw', name: 'Task', icon: '📚' };
+            const defaultType = isGeneral
+                ? (types.find(t => t.id === 'tt_todo') || types.find(t => t.id === 'tt_custom') || types[0] || { id: 'tt_todo', name: 'To-Do', icon: '📝' })
+                : (types[0] || { id: 'tt_hw', name: 'HW', icon: '📚' });
 
             const newItem = {
                 kind: parsed.kind,
@@ -644,7 +676,7 @@ function createTaskItemElement(item, subj, card, scheduleContent, hasSearch, con
                 <div class="compact-task-title-row">
                     <span class="compact-kind-tag">
                         <span class="kind-svg-icon">${isTask ? ICONS.task : ICONS.event}</span>
-                        ${escapeHtml(item.typeName || (isTask ? 'Task' : 'Event'))}
+                        ${escapeHtml(item.typeName || (isTask ? (!item.subjectId ? 'To-Do' : 'Task') : 'Event'))}
                     </span>
                     <span class="compact-task-title" title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</span>
                 </div>

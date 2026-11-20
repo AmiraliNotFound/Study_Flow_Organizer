@@ -433,6 +433,19 @@ export function applyPalette(paletteId = 'default', customColors = null) {
         root.style.setProperty('--card-surface-popover', cardSurfacePopover);
         root.style.setProperty('--card-surface-sunken', cardSurfaceSunken);
 
+        // General Tasks Banner dynamic theme synchronization
+        const generalBannerBg = isFlat
+            ? (isLight ? adjustBrightness(colors.surface, -6) : adjustBrightness(colors.surface, 8))
+            : (isLight
+                ? `linear-gradient(135deg, ${adjustBrightness(colors.surface, -3)} 0%, ${adjustBrightness(colors.canvas, -8)} 100%)`
+                : `linear-gradient(135deg, ${hexToRgba(adjustBrightness(colors.surface, 10), 0.95)} 0%, ${hexToRgba(adjustBrightness(colors.canvasDeep || colors.canvas, -5), 0.98)} 100%)`);
+        const generalBannerText = colors.text;
+        const generalBannerSubtitle = isLight ? '#334155' : hexToRgba(colors.text, 0.80);
+
+        root.style.setProperty('--general-banner-bg', generalBannerBg);
+        root.style.setProperty('--general-banner-text', generalBannerText);
+        root.style.setProperty('--general-banner-subtitle', generalBannerSubtitle);
+
         root.style.setProperty('--card-border', cardBorder);
         root.style.setProperty('--card-border-subtle', cardBorderSubtle);
         root.style.setProperty('--card-border-strong', cardBorderStrong);

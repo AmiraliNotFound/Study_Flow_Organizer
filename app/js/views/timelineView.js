@@ -37,6 +37,10 @@ export function renderTimelineView(container) {
     const deadlinelessItems = sortedItems.filter(item => !item.dueDate);
 
     if (sortedItems.length === 0) {
+        if (typeof document !== 'undefined') {
+            const existingBtn = document.getElementById('timelineFloatingJumpBtn');
+            if (existingBtn) existingBtn.style.display = 'none';
+        }
         container.innerHTML = `
             <div class="empty-workspace-banner view-flow-in">
                 <div class="empty-icon-circle">${ICONS.clock}</div>
@@ -53,17 +57,6 @@ export function renderTimelineView(container) {
 
     const wrapper = document.createElement('div');
     wrapper.className = 'timeline-view-wrapper view-flow-in';
-
-    // Header without top button (Requirement 2: only single floating button)
-    const header = document.createElement('div');
-    header.className = 'timeline-header-box';
-    header.innerHTML = `
-        <div class="timeline-header-content">
-            <h2>Timeline Schedule</h2>
-            <p>Proportional milestone spacing in Shamsi & Gregorian calendar with live anchor at Current Location</p>
-        </div>
-    `;
-    wrapper.appendChild(header);
 
     // Deadlineless Tasks Section (if any exist)
     if (deadlinelessItems.length > 0) {
@@ -327,15 +320,6 @@ export function renderTimelineView(container) {
 
     wrapper.appendChild(spine);
 
-    // Requirement 2: Single Floating Jump to Current Date Button
-    const floatingBtn = document.createElement('button');
-    floatingBtn.type = 'button';
-    floatingBtn.className = 'timeline-floating-jump-today visible';
-    floatingBtn.id = 'timelineFloatingJumpBtn';
-    floatingBtn.title = 'Jump to current date';
-    floatingBtn.innerHTML = `${ICONS.target} <span>Jump to Today</span>`;
-    wrapper.appendChild(floatingBtn);
-
     container.appendChild(wrapper);
 
     const jumpToAnchor = () => {
@@ -347,7 +331,21 @@ export function renderTimelineView(container) {
         }
     };
 
-    floatingBtn.addEventListener('click', jumpToAnchor);
+    // Fixed floating button on bottom right of the window (doesn't move with scrolling)
+    if (typeof document !== 'undefined') {
+        let floatingBtn = document.getElementById('timelineFloatingJumpBtn');
+        if (!floatingBtn) {
+            floatingBtn = document.createElement('button');
+            floatingBtn.type = 'button';
+            floatingBtn.className = 'timeline-floating-jump-today visible';
+            floatingBtn.id = 'timelineFloatingJumpBtn';
+            floatingBtn.title = 'Jump to current date';
+            floatingBtn.innerHTML = `${ICONS.target} <span>Jump to Today</span>`;
+            document.body.appendChild(floatingBtn);
+        }
+        floatingBtn.style.display = 'inline-flex';
+        floatingBtn.onclick = jumpToAnchor;
+    }
 
     // Auto-scroll to Today marker on view load/switch
     requestAnimationFrame(() => {

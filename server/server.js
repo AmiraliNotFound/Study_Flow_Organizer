@@ -189,6 +189,7 @@ function loadDatabase() {
                 { id: "tt_project", name: "Project", icon: "💻" },
                 { id: "tt_report", name: "Lab Report", icon: "📄" },
                 { id: "tt_reading", name: "Reading", icon: "📖" },
+                { id: "tt_todo", name: "To-Do", icon: "📝" },
                 { id: "tt_custom", name: "Custom", icon: "📌" }
             ],
             eventTypes: [

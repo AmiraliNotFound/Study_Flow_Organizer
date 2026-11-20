@@ -300,7 +300,7 @@ export function renderKanbanView(container) {
                     <div class="kanban-card-footer">
                         <span class="kanban-kind-indicator">
                             <span class="kind-svg">${isTask ? ICONS.task : ICONS.event}</span>
-                            ${escapeHtml(item.typeName || (isTask ? 'Task' : 'Event'))}
+                            ${escapeHtml(item.typeName || (isTask ? (!item.subjectId ? 'To-Do' : 'Task') : 'Event'))}
                         </span>
                     </div>
                 `;
@@ -376,7 +376,9 @@ export function renderKanbanView(container) {
                     if (!parsed) return;
 
                     const types = parsed.kind === 'task' ? AppState.config.taskTypes : AppState.config.eventTypes;
-                    const defaultType = types[0] || { id: 'tt_hw', name: 'Task', icon: '📚' };
+                    const defaultType = isGeneralTask
+                        ? (types.find(t => t.id === 'tt_todo') || types.find(t => t.id === 'tt_custom') || types[0] || { id: 'tt_todo', name: 'To-Do', icon: '📝' })
+                        : (types[0] || { id: 'tt_hw', name: 'HW', icon: '📚' });
 
                     const newItem = {
                         kind: parsed.kind,

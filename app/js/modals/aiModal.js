@@ -871,7 +871,7 @@ function createEditableActionCard(action, index) {
         card._typeSelect = new CustomSelect({
             container: typeSlot,
             options: typeOptions,
-            value: action.typeId || (isEvent ? 'et_quiz' : 'tt_hw'),
+            value: action.typeId || (isEvent ? 'et_quiz' : (action.subjectId ? 'tt_hw' : 'tt_todo')),
             placeholder: 'Type...',
             className: 'custom-select-sm'
         });
@@ -1134,9 +1134,9 @@ async function handleApplyAll() {
                 // Create item
                 const itemPayload = {
                     kind: action.kind || 'task',
-                    typeId: action.typeId || (action.kind === 'event' ? 'et_quiz' : 'tt_hw'),
-                    typeName: action.typeName || (action.kind === 'event' ? 'Quiz' : 'HW'),
-                    typeIcon: action.typeIcon || (action.kind === 'event' ? '📝' : '📚'),
+                    typeId: action.typeId || (action.kind === 'event' ? 'et_quiz' : (resolvedSubjectId ? 'tt_hw' : 'tt_todo')),
+                    typeName: action.typeName || (action.kind === 'event' ? 'Quiz' : (resolvedSubjectId ? 'HW' : 'To-Do')),
+                    typeIcon: action.typeIcon || (action.kind === 'event' ? '📝' : (resolvedSubjectId ? '📚' : '📝')),
                     subjectId: resolvedSubjectId,
                     title: action.title || 'Untitled',
                     dueDate: action.dueDate ? parseAiDueDate(action.dueDate).toISOString() : new Date().toISOString(),

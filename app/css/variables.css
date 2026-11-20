@@ -87,6 +87,11 @@
     --card-surface-popover: #35504d;
     --card-surface-sunken: rgba(20, 32, 30, 0.75);
 
+    /* General Tasks Banner Tokens (Dynamic Theme Synced) */
+    --general-banner-bg: linear-gradient(135deg, rgba(46, 68, 66, 0.95) 0%, rgba(20, 32, 30, 0.98) 100%);
+    --general-banner-text: #EDDDD4;
+    --general-banner-subtitle: rgba(237, 221, 212, 0.80);
+
     /* Borders & Outlines */
     --card-border: rgba(237, 221, 212, 0.14);
     --card-border-subtle: rgba(237, 221, 212, 0.08);
