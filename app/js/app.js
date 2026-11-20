@@ -62,9 +62,9 @@ function updateHeaderDateDisplay() {
     const dual = formatDualDate(now);
     if (dual) {
         dateHeader.innerHTML = `
-            <span>${dual.gregFull}</span>
+            <span class="header-shamsi-date" style="color: var(--color-primary); font-weight: 700;">${dual.weekdayEn}, ${dual.jd} ${dual.monthNameEn} ${dual.jy}</span>
             <span style="opacity: 0.5; margin: 0 5px;">•</span>
-            <span style="color: var(--color-primary); font-weight: 700;">${dual.shamsiFull}</span>
+            <span class="header-greg-sub" style="color: var(--text-muted); font-size: 0.85em;">${dual.gregFull}</span>
         `;
     }
 }
@@ -220,6 +220,11 @@ function initAppEvents() {
     document.getElementById('menuNewTaskBtn')?.addEventListener('click', () => {
         createMenu?.classList.add('hidden');
         openItemModal(null, null, 'task');
+    });
+
+    document.getElementById('menuNewFreeTaskBtn')?.addEventListener('click', () => {
+        createMenu?.classList.add('hidden');
+        openItemModal(null, 'general', 'task', null, true);
     });
 
     document.getElementById('menuNewEventBtn')?.addEventListener('click', () => {

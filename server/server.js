@@ -209,6 +209,358 @@ function loadDatabase() {
     };
 }
 
+// Fallback models configuration
+const DEFAULT_GEMINI_FALLBACKS = [
+    'gemini-3.5-flash-lite',
+    'gemini-flash-lite-latest',
+    'gemini-3.1-flash-lite',
+    'gemini-3.1-flash-lite-preview',
+    'gemini-3-flash-preview',
+    'gemini-3.5-flash'
+];
+
+const DEFAULT_OPENAI_FALLBACKS = [
+    'gpt-4o-mini',
+    'gpt-4o',
+    'gpt-3.5-turbo'
+];
+
+/**
+ * Safely extracts and parses JSON from model responses, handling markdown code fences,
+ * conversational preambles/postambles, and surrounding whitespace.
+ */
+function extractJsonFromText(text) {
+    if (!text || typeof text !== 'string') return null;
+    const trimmed = text.trim();
+    if (!trimmed) return null;
+
+    // 1. Direct parse attempt
+    try {
+        return JSON.parse(trimmed);
+    } catch (_) {}
+
+    // 2. Markdown code block extraction: ```json { ... } ``` or ``` { ... } ```
+    const codeBlockMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+    if (codeBlockMatch && codeBlockMatch[1]) {
+        try {
+            return JSON.parse(codeBlockMatch[1].trim());
+        } catch (_) {}
+    }
+
+    // 3. Find outer matching { ... } or [ ... ]
+    const firstBrace = trimmed.indexOf('{');
+    const lastBrace = trimmed.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace > firstBrace) {
+        try {
+            return JSON.parse(trimmed.slice(firstBrace, lastBrace + 1));
+        } catch (_) {}
+    }
+
+    return null;
+}
+
+/**
+ * Execute AI Generation with automatic model fallback across configured priority chain
+ */
+async function executeAiGenerate({
+    provider = 'gemini',
+    apiKey = '',
+    baseUrl = '',
+    model = '',
+    fallbackModels = [],
+    prompt = '',
+    audioData = null,
+    audioMimeType = 'audio/webm',
+    systemPrompt = '',
+    temperature = 0.1,
+    requestTimeoutMs = 15000,
+    fetchFn = fetch
+} = {}) {
+    const cleanApiKey = (apiKey || '').trim();
+    const cleanBaseUrl = (baseUrl || '').trim();
+    const cleanPrompt = (prompt || '').trim();
+    const primaryModel = (model || '').trim();
+
+    if (!cleanApiKey) {
+        return { status: 400, body: { success: false, error: 'API key is required' } };
+    }
+    if (!primaryModel) {
+        return { status: 400, body: { success: false, error: 'Model name is required' } };
+    }
+    if (!cleanPrompt && !audioData) {
+        return { status: 400, body: { success: false, error: 'Either a text prompt or voice audio is required' } };
+    }
+
+    const cleanPrimary = primaryModel.replace(/^models\//, '');
+    const candidateModels = [cleanPrimary];
+
+    const isGemini = provider === 'gemini';
+    const defaultFallbacks = isGemini ? DEFAULT_GEMINI_FALLBACKS : DEFAULT_OPENAI_FALLBACKS;
+    let userFallbacks = defaultFallbacks;
+    if (Array.isArray(fallbackModels) && fallbackModels.length > 0) {
+        const matchesProvider = isGemini
+            ? fallbackModels.every(m => !String(m).toLowerCase().startsWith('gpt-'))
+            : fallbackModels.every(m => !String(m).toLowerCase().startsWith('gemini-'));
+        if (matchesProvider) {
+            userFallbacks = fallbackModels;
+        }
+    }
+
+    for (const fb of userFallbacks) {
+        const cleanFb = String(fb || '').replace(/^models\//, '').trim();
+        if (cleanFb && !candidateModels.includes(cleanFb)) {
+            candidateModels.push(cleanFb);
+        }
+    }
+
+    const attempted = [];
+    let successfulResult = null;
+
+    for (let i = 0; i < candidateModels.length; i++) {
+        const currentModel = candidateModels[i];
+        const isFallback = currentModel !== cleanPrimary;
+
+        try {
+            if (provider === 'gemini') {
+                const modelIdentifier = `models/${currentModel}`;
+                const url = `https://generativelanguage.googleapis.com/v1beta/${modelIdentifier}:generateContent?key=${encodeURIComponent(cleanApiKey)}`;
+
+                const parts = [];
+                if (audioData) {
+                    parts.push({
+                        inlineData: {
+                            mimeType: audioMimeType,
+                            data: audioData
+                        }
+                    });
+                }
+
+                if (cleanPrompt) {
+                    parts.push({ text: cleanPrompt });
+                } else if (audioData) {
+                    parts.push({
+                        text: 'Listen carefully to this audio recording and extract all schedule actions in English strictly adhering to the system instructions.'
+                    });
+                }
+
+                const payload = {
+                    contents: [{ role: 'user', parts }],
+                    generationConfig: {
+                        responseMimeType: 'application/json',
+                        temperature
+                    }
+                };
+
+                if (systemPrompt) {
+                    payload.systemInstruction = {
+                        parts: [{ text: systemPrompt }]
+                    };
+                }
+
+                const controller = new AbortController();
+                const timeoutHandle = setTimeout(() => controller.abort(), requestTimeoutMs);
+
+                let apiRes;
+                try {
+                    apiRes = await fetchFn(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload),
+                        signal: controller.signal
+                    });
+                } finally {
+                    clearTimeout(timeoutHandle);
+                }
+
+                if (!apiRes.ok) {
+                    const errJson = await apiRes.json().catch(() => ({}));
+                    const status = apiRes.status;
+                    const msg = errJson.error?.message || `Google Gemini API returned status ${status}`;
+
+                    attempted.push({ model: currentModel, status, error: msg });
+                    console.warn(`[AI Server] Model ${currentModel} failed (${status}): ${msg}`);
+
+                    // Stop immediately if API key itself is invalid or access denied
+                    const isAuthError = status === 401 ||
+                        (status === 400 && msg.includes('API_KEY_INVALID')) ||
+                        (status === 403 && (msg.includes('API_KEY') || msg.includes('PERMISSION_DENIED') || msg.toLowerCase().includes('auth')));
+                    if (isAuthError) {
+                        return {
+                            status,
+                            body: {
+                                success: false,
+                                error: `Authentication failed: ${msg}`,
+                                attemptedModels: attempted
+                            }
+                        };
+                    }
+
+                    // For 503 high demand, 429 quota/rate limit, 500, 404 retired, etc. failover to next model
+                    continue;
+                }
+
+                const data = await apiRes.json();
+                const candidateParts = data.candidates?.[0]?.content?.parts || [];
+                const textResponse = candidateParts
+                    .filter(p => !p.thought && typeof p.text === 'string')
+                    .map(p => p.text)
+                    .join('') || candidateParts.map(p => p.text || '').join('');
+
+                if (!textResponse) {
+                    attempted.push({ model: currentModel, status: 200, error: 'Empty text in response candidates' });
+                    console.warn(`[AI Server] Model ${currentModel} returned empty text, falling over...`);
+                    continue;
+                }
+
+                const parsedData = extractJsonFromText(textResponse);
+                if (!parsedData || typeof parsedData !== 'object' || !Array.isArray(parsedData.actions)) {
+                    attempted.push({
+                        model: currentModel,
+                        status: 200,
+                        error: 'Model response was not valid JSON schedule plan (missing actions array)'
+                    });
+                    console.warn(`[AI Server] Model ${currentModel} returned invalid schedule plan, falling over...`);
+                    continue;
+                }
+
+                successfulResult = {
+                    modelUsed: currentModel,
+                    fallbackTriggered: isFallback,
+                    attemptedModels: attempted,
+                    rawText: textResponse,
+                    data: parsedData
+                };
+                break;
+            } else {
+                // OpenAI / Custom / OpenRouter
+                const endpoint = (cleanBaseUrl || 'https://api.openai.com/v1').replace(/\/+$/, '');
+                const url = `${endpoint}/chat/completions`;
+
+                const messages = [];
+                if (systemPrompt) {
+                    messages.push({ role: 'system', content: systemPrompt });
+                }
+                const userContent = cleanPrompt || (audioData ? 'Extract academic schedule actions from the provided audio instruction.' : '');
+                messages.push({ role: 'user', content: userContent });
+
+                const payload = {
+                    model: currentModel,
+                    messages,
+                    response_format: { type: 'json_object' },
+                    temperature
+                };
+
+                const controller = new AbortController();
+                const timeoutHandle = setTimeout(() => controller.abort(), requestTimeoutMs);
+
+                let apiRes;
+                try {
+                    apiRes = await fetchFn(url, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${cleanApiKey}`
+                        },
+                        body: JSON.stringify(payload),
+                        signal: controller.signal
+                    });
+                } finally {
+                    clearTimeout(timeoutHandle);
+                }
+
+                if (!apiRes.ok) {
+                    const errJson = await apiRes.json().catch(() => ({}));
+                    const status = apiRes.status;
+                    const msg = errJson.error?.message || `AI API returned status ${status}`;
+
+                    attempted.push({ model: currentModel, status, error: msg });
+                    console.warn(`[AI Server] Model ${currentModel} failed (${status}): ${msg}`);
+
+                    const isAuthError = status === 401 ||
+                        (status === 403 && (msg.toLowerCase().includes('auth') || msg.toLowerCase().includes('permission') || msg.toLowerCase().includes('key')));
+                    if (isAuthError) {
+                        return {
+                            status,
+                            body: {
+                                success: false,
+                                error: `Authentication failed: ${msg}`,
+                                attemptedModels: attempted
+                            }
+                        };
+                    }
+
+                    continue;
+                }
+
+                const data = await apiRes.json();
+                const textResponse = data.choices?.[0]?.message?.content || '';
+                if (!textResponse) {
+                    attempted.push({ model: currentModel, status: 200, error: 'Empty text in completion choices' });
+                    console.warn(`[AI Server] Model ${currentModel} returned empty text, falling over...`);
+                    continue;
+                }
+
+                const parsedData = extractJsonFromText(textResponse);
+                if (!parsedData || typeof parsedData !== 'object' || !Array.isArray(parsedData.actions)) {
+                    attempted.push({
+                        model: currentModel,
+                        status: 200,
+                        error: 'Model response was not valid JSON schedule plan (missing actions array)'
+                    });
+                    console.warn(`[AI Server] Model ${currentModel} returned invalid schedule plan, falling over...`);
+                    continue;
+                }
+
+                successfulResult = {
+                    modelUsed: currentModel,
+                    fallbackTriggered: isFallback,
+                    attemptedModels: attempted,
+                    rawText: textResponse,
+                    data: parsedData
+                };
+                break;
+            }
+        } catch (fetchErr) {
+            const isTimeout = fetchErr.name === 'AbortError';
+            const errorMsg = isTimeout ? 'Request timed out' : fetchErr.message;
+            attempted.push({
+                model: currentModel,
+                status: null,
+                error: errorMsg
+            });
+            console.warn(`[AI Server] Network error for model ${currentModel}: ${errorMsg}`);
+            continue;
+        }
+    }
+
+    if (successfulResult) {
+        if (successfulResult.fallbackTriggered) {
+            console.log(`[AI Server] Successfully generated schedule actions using fallback model: ${successfulResult.modelUsed}`);
+        }
+        return {
+            status: 200,
+            body: {
+                success: true,
+                ...successfulResult
+            }
+        };
+    }
+
+    const lastAttempt = attempted[attempted.length - 1];
+    const details = attempted.map(a => `${a.model} (${a.status || 'Network Error'}: ${a.error})`).join('; ');
+    const failureMessage = `All models in fallback chain failed: ${details}`;
+    console.error(`[AI Server] ${failureMessage}`);
+
+    return {
+        status: lastAttempt?.status || 503,
+        body: {
+            success: false,
+            error: failureMessage,
+            attemptedModels: attempted
+        }
+    };
+}
+
 // Request Handler
 async function handleRequest(req, res) {
     if (req.method === 'OPTIONS') {
@@ -515,6 +867,19 @@ $topForm.Dispose()
                 }
                 const data = await apiRes.json();
                 const rawModels = Array.isArray(data.models) ? data.models : [];
+                
+                const recommendedPriority = [
+                    'gemini-3.5-flash-lite',
+                    'gemini-3-flash-preview',
+                    'gemini-3.8-flash',
+                    'gemini-3.5-flash',
+                    'gemini-3.1-flash-lite',
+                    'gemini-2.5-flash',
+                    'gemini-3.6-flash',
+                    'gemini-3.7-flash',
+                    'gemini-3.1-pro-preview'
+                ];
+
                 // Filter models that support generateContent
                 const models = rawModels
                     .filter(m => Array.isArray(m.supportedGenerationMethods) && m.supportedGenerationMethods.includes('generateContent'))
@@ -526,6 +891,14 @@ $topForm.Dispose()
                             displayName: m.displayName || cleanId,
                             description: m.description || ''
                         };
+                    })
+                    .sort((a, b) => {
+                        const idxA = recommendedPriority.indexOf(a.id);
+                        const idxB = recommendedPriority.indexOf(b.id);
+                        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+                        if (idxA !== -1) return -1;
+                        if (idxB !== -1) return 1;
+                        return a.displayName.localeCompare(b.displayName);
                     });
                 return sendJson(res, 200, { success: true, provider: 'gemini', models });
             } else {
@@ -560,153 +933,12 @@ $topForm.Dispose()
         }
     }
 
-    // 8. POST /api/ai/generate: Process prompts and generate structured actions
+    // 8. POST /api/ai/generate: Process prompts and generate structured actions with automatic fallback
     if (pathname === '/api/ai/generate' && req.method === 'POST') {
         try {
             const body = await parseJsonBody(req);
-            const provider = body.provider || 'gemini';
-            const apiKey = (body.apiKey || '').trim();
-            const baseUrl = (body.baseUrl || '').trim();
-            const model = (body.model || '').trim();
-            const prompt = (body.prompt || '').trim();
-            const audioData = body.audioData || null; // base64 encoded audio
-            const audioMimeType = body.audioMimeType || 'audio/webm';
-            const systemPrompt = body.systemPrompt || '';
-            const temperature = typeof body.temperature === 'number' ? body.temperature : 0.1;
-
-            if (!apiKey) {
-                return sendJson(res, 400, { success: false, error: 'API key is required' });
-            }
-            if (!model) {
-                return sendJson(res, 400, { success: false, error: 'Model name is required' });
-            }
-            if (!prompt && !audioData) {
-                return sendJson(res, 400, { success: false, error: 'Either a text prompt or voice audio is required' });
-            }
-
-            if (provider === 'gemini') {
-                const modelIdentifier = model.startsWith('models/') ? model : `models/${model}`;
-                const url = `https://generativelanguage.googleapis.com/v1beta/${modelIdentifier}:generateContent?key=${encodeURIComponent(apiKey)}`;
-
-                // Build parts for multimodal input (audio + text)
-                const parts = [];
-
-                if (audioData) {
-                    parts.push({
-                        inlineData: {
-                            mimeType: audioMimeType,
-                            data: audioData
-                        }
-                    });
-                }
-
-                if (prompt) {
-                    parts.push({ text: prompt });
-                } else if (audioData) {
-                    parts.push({
-                        text: 'Listen carefully to this audio recording and extract all schedule actions in English strictly adhering to the system instructions.'
-                    });
-                }
-
-                const payload = {
-                    contents: [
-                        {
-                            role: 'user',
-                            parts
-                        }
-                    ],
-                    generationConfig: {
-                        responseMimeType: 'application/json',
-                        temperature
-                    }
-                };
-
-                if (systemPrompt) {
-                    payload.systemInstruction = {
-                        parts: [{ text: systemPrompt }]
-                    };
-                }
-
-                const apiRes = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (!apiRes.ok) {
-                    const errJson = await apiRes.json().catch(() => ({}));
-                    const msg = errJson.error?.message || `Google Gemini API returned status ${apiRes.status}`;
-                    return sendJson(res, apiRes.status, { success: false, error: msg });
-                }
-
-                const data = await apiRes.json();
-                const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-
-                let parsedData = null;
-                try {
-                    const cleanJson = textResponse.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
-                    parsedData = JSON.parse(cleanJson);
-                } catch (parseErr) {
-                    console.warn('[AI Server] Could not parse Gemini response as JSON:', parseErr.message);
-                }
-
-                return sendJson(res, 200, {
-                    success: true,
-                    rawText: textResponse,
-                    data: parsedData
-                });
-            } else {
-                // OpenAI / Custom / OpenRouter
-                const endpoint = (baseUrl || 'https://api.openai.com/v1').replace(/\/+$/, '');
-                const url = `${endpoint}/chat/completions`;
-
-                const messages = [];
-                if (systemPrompt) {
-                    messages.push({ role: 'system', content: systemPrompt });
-                }
-
-                const userContent = prompt || (audioData ? 'Extract academic schedule actions from the provided audio instruction.' : '');
-                messages.push({ role: 'user', content: userContent });
-
-                const payload = {
-                    model,
-                    messages,
-                    response_format: { type: 'json_object' },
-                    temperature
-                };
-
-                const apiRes = await fetch(url, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${apiKey}`
-                    },
-                    body: JSON.stringify(payload)
-                });
-
-                if (!apiRes.ok) {
-                    const errJson = await apiRes.json().catch(() => ({}));
-                    const msg = errJson.error?.message || `AI API returned status ${apiRes.status}`;
-                    return sendJson(res, apiRes.status, { success: false, error: msg });
-                }
-
-                const data = await apiRes.json();
-                const textResponse = data.choices?.[0]?.message?.content || '';
-
-                let parsedData = null;
-                try {
-                    const cleanJson = textResponse.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
-                    parsedData = JSON.parse(cleanJson);
-                } catch (parseErr) {
-                    console.warn('[AI Server] Could not parse OpenAI response as JSON:', parseErr.message);
-                }
-
-                return sendJson(res, 200, {
-                    success: true,
-                    rawText: textResponse,
-                    data: parsedData
-                });
-            }
+            const result = await executeAiGenerate(body);
+            return sendJson(res, result.status, result.body);
         } catch (err) {
             console.error('[AI Generate Error]', err);
             return sendJson(res, 500, { success: false, error: err.message });
@@ -749,17 +981,31 @@ $topForm.Dispose()
 
 const server = http.createServer(handleRequest);
 
-server.listen(PORT, '127.0.0.1', () => {
-    console.log(`==================================================================`);
-    console.log(`  🎓 Study Flow Organizer v4.1`);
-    console.log(`  🟢 Server running at: http://127.0.0.1:${PORT}`);
-    console.log(`  📂 Standard AppData : ${DATA_DIR}`);
-    console.log(`==================================================================`);
-});
+if (process.env.NODE_ENV !== 'test') {
+    server.on('error', (err) => {
+        if (err.code === 'EADDRINUSE') {
+            console.warn(`[AI Server] Port ${PORT} is already in use; skipping server.listen.`);
+        } else {
+            console.error('[AI Server Error]', err);
+        }
+    });
 
-process.on('SIGINT', () => {
-    console.log('\nStopping Study Flow Server...');
-    server.close(() => process.exit(0));
-});
+    server.listen(PORT, '127.0.0.1', () => {
+        console.log(`==================================================================`);
+        console.log(`  🎓 Study Flow Organizer v4.1`);
+        console.log(`  🟢 Server running at: http://127.0.0.1:${PORT}`);
+        console.log(`  📂 Standard AppData : ${DATA_DIR}`);
+        console.log(`==================================================================`);
+    });
+
+    process.on('SIGINT', () => {
+        console.log('\nStopping Study Flow Server...');
+        server.close(() => process.exit(0));
+    });
+}
 
 module.exports = server;
+module.exports.executeAiGenerate = executeAiGenerate;
+module.exports.extractJsonFromText = extractJsonFromText;
+module.exports.DEFAULT_GEMINI_FALLBACKS = DEFAULT_GEMINI_FALLBACKS;
+module.exports.DEFAULT_OPENAI_FALLBACKS = DEFAULT_OPENAI_FALLBACKS;
